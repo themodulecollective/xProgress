@@ -104,7 +104,7 @@ Function Initialize-xProgress
     {
         'CalculatedInterval'
         {
-            $divisor = switch ($CalculatedInterval)
+            $divisor = switch ($CalculatedProgressInterval)
             {
                 '1Percent'
                 {100}
