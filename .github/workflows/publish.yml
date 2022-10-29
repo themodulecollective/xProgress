@@ -12,7 +12,9 @@ jobs:
         id: checkout
         uses: actions/checkout@v3
       - name: Publish Module
-        uses: pcgeek86/publish-powershell-module-action@v20
-        id: publish-module
-        with:
-          NuGetApiKey: ${{ secrets.PSGallery_EMPK }}
+        shell: pwsh
+        run: |
+          New-Item -itemtype directory -path xProgress
+          Move-Item -Path LICENSE,README.md,xProgress.psd1,xProgress.psm1 -Destination xProgress
+          Get-ChildItem
+          Publish-Module -Path ./xProgress/ -NuGetApiKey ${{ secrets.PSGallery_EMPK }} -Verbose
