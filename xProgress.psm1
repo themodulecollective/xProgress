@@ -23,10 +23,11 @@ Function Write-xProgress
     {
         throw("No xProgress Instance found for identity $ProgressGUID")
     }
-    $counter = $Script:ProgressTracker.$($ProgressGUID).Counter++ #advance the counter
+    $Script:ProgressTracker.$($ProgressGUID).Counter++ #advance the counter
+    $counter = $Script:ProgressTracker.$($ProgressGUID).Counter #capture the current counter
     $progressInterval = $Script:ProgressTracker.$($ProgressGUID).ProgressInterval #get the progressInterval for the modulus check
 
-    if ($counter % $progressInterval -eq 0)
+    if ($counter % $progressInterval -eq 0 -or $counter -eq 1)
     {
         #modulus check passed so w
         $activity = $Script:ProgressTracker.$($ProgressGUID).Activity
@@ -35,7 +36,7 @@ Function Write-xProgress
         $elapsedSeconds = [math]::Ceiling($stopwatch.elapsed.TotalSeconds)
         $secondsPerItem = [math]::Ceiling($elapsedSeconds/$counter)
         $secondsRemaining = $($total - $counter) * $secondsPerItem
-        $progressItem = $counter + $progressInterval
+        $progressItem = $counter + $progressInterval - 1
         $wpParams = @{
             Activity         = $activity
             Status           = "Processing $counter through $progressItem of $total"
