@@ -1,5 +1,7 @@
 # xProgress Powershell Module
 
+The goal of xProgress is to make using progress bars in Powershell as simple as possible while minimizing the performance impact of Write-Progress for processing of large numbers of actions when iterating through an array.  
+
 xProgress module provides the following functions to enable progress display in Powershell functions, modules, and scripts where progress intervals are used to write progress for intervals other than every record (for performance reasons as Write-Progress is expensive to performance) and to automatically provide counter and timer functionality for percentage complete and seconds remaining calculations.
 
 ```Powershell
