@@ -39,6 +39,7 @@ Complete-xProgress -Identity $xProgressId
 
 ## Releases
 
+0.0.4 add -decrementCounter to Set-xProgress
 0.0.3 new functions: Get-xProgress, Set-xProgress.  New functionality: Parent/Child progress bars
 0.0.2 bug fixes
 0.0.1 initial release with Initialize-xProgress, Write-xProgress, and Complete-xProgress

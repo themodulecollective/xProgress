@@ -192,6 +192,9 @@ Function Set-xProgress
         ,
         [parameter()]
         [switch]$AutomaticCurrentOperation
+        ,
+        [parameter()]
+        [switch]$DecrementCounter
     )
 
     process
@@ -227,6 +230,13 @@ Function Set-xProgress
                     if ($true -eq $AutomaticCurrentOperation)
                     {
                         $xPi.CurrentOperationType = 'Automatic'
+                    }
+                }
+                'DecrementCounter'
+                {
+                    if ($true -eq $DecrementCounter)
+                    {
+                        $xPi.Counter--
                     }
                 }
             }
