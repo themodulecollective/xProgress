@@ -9,7 +9,7 @@ Script/Module authors may want to limit how often write-progress is called for p
 Additionally, xProgress automatically provides counter and timer functionality for percentage complete and seconds remaining calculations, as well as automated management of ParentID for nested progress bars.
 
 ```Powershell
-Initialize-xProgress
+New-xProgress
 Get-xProgress
 Write-xProgress
 Set-xProgress
@@ -20,7 +20,7 @@ Complete-xProgress
 
 ```powershell
 
-$xProgressID = Initialize-xProgress -ArrayToProcess $MyListOfItems -CalculatedProgressInterval 1Percent -Activity "Process MyListOfItems"
+$xProgressID = New-xProgress -ArrayToProcess $MyListOfItems -CalculatedProgressInterval 1Percent -Activity "Process MyListOfItems"
 #Sets up xProgress to display progress for a looped operation on $MyListOfItems.  When Write-xProgress is called will update progress at each one percent increment of processing and will use -activity as the activity for Write-Progress.
 
 foreach ($i in $MyListOfItems)
@@ -42,7 +42,7 @@ Complete-xProgress -Identity $xProgressId
 0.0.4 add -decrementCounter to Set-xProgress
 0.0.3 new functions: Get-xProgress, Set-xProgress.  New functionality: Parent/Child progress bars
 0.0.2 bug fixes
-0.0.1 initial release with Initialize-xProgress, Write-xProgress, and Complete-xProgress
+0.0.1 initial release with New-xProgress, Write-xProgress, and Complete-xProgress
 
 ## Development Plans
 

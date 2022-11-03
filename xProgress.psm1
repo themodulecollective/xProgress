@@ -1,7 +1,7 @@
 $script:ProgressTracker = @{}
 $script:WriteProgressID = 628
 
-Function Initialize-xProgress
+Function New-xProgress
 {
     <#
     .SYNOPSIS
@@ -11,10 +11,10 @@ Function Initialize-xProgress
         Automatically sets up counters, timers, and incremental progress tracking.
         Can show progress only at a selected interval to improve performance (write-progress is expensive).
     .EXAMPLE
-        $xProgressID = Initialize-xProgress -ArrayToProcess $MyListOfItems -CalculatedProgressInterval 1Percent -Activity "Process MyListOfItems"
+        $xProgressID = New-xProgress -ArrayToProcess $MyListOfItems -CalculatedProgressInterval 1Percent -Activity "Process MyListOfItems"
         Sets up xProgress to display progress for a looped operation on $MyListOfItems.  When Write-xProgress is called will update progress at each one percent increment of processing and will use -activity as the activity for Write-Progress.
     .EXAMPLE
-        $xProgressID = Initialize-xProgress -ArrayToProcess $MyListOfItems -ExplicitProgressInterval 5 -Activity "Process MyListOfItems"
+        $xProgressID = New-xProgress -ArrayToProcess $MyListOfItems -ExplicitProgressInterval 5 -Activity "Process MyListOfItems"
         Sets up xProgress to display progress for a looped operation on $MyListOfItems.  When Write-xProgress is called will update progress once for each 5 items of processing and will use -activity as the activity for Write-Progress.
         Will throw an error if MyListOfItems is less than 5 items.
     #>
@@ -136,7 +136,7 @@ Function Get-xProgress
     .SYNOPSIS
         Gets an xProgress instance based on the provided Identity or gets all current xProgress instances
     .DESCRIPTION
-        Gets an xProgress configuration instance or all current xProgress configuration instances.  Instances would have been created by a previous Initialize-xProgress.
+        Gets an xProgress configuration instance or all current xProgress configuration instances.  Instances would have been created by a previous New-xProgress.
     .EXAMPLE
         Get-xProgress -Identity $xProgressID
         Returns the identified xProgress configuration instance if it exists
@@ -144,7 +144,7 @@ Function Get-xProgress
     [cmdletbinding()]
     param(
         [parameter(ValueFromPipeline,ValueFromPipelineByPropertyName)]
-        [guid[]]$Identity #GUID or GUID string provided from a previously run Initialize-xProgress
+        [guid[]]$Identity #GUID or GUID string provided from a previously run New-xProgress
     )
     begin
     {
@@ -168,7 +168,7 @@ Function Set-xProgress
     .SYNOPSIS
         Sets an xProgress instance based on the provided Identity(ies)
     .DESCRIPTION
-        Sets an xProgress configuration instance or all specified xProgress instances.  Instances would have been created by a previous Initialize-xProgress.
+        Sets an xProgress configuration instance or all specified xProgress instances.  Instances would have been created by a previous New-xProgress.
     .EXAMPLE
         Set-xProgress -Identity $xProgressID -Status 'Final Phase'
         Sets the identified xProgress instance Status to the specified value 'Final Phase'
@@ -176,7 +176,7 @@ Function Set-xProgress
     [cmdletbinding()]
     param(
         [parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName)]
-        [guid[]]$Identity #GUID or GUID string provided from a previously run Initialize-xProgress
+        [guid[]]$Identity #GUID or GUID string provided from a previously run New-xProgress
         ,
         [parameter()]
         [string]$Activity #Displayed in the progress bar Activity field (passed through to Write-Progress -Activity). This is the main title of the progress bar.
@@ -248,9 +248,9 @@ Function Write-xProgress
 {
     <#
     .SYNOPSIS
-        Writes powershell progress output using Write-Progress based on an instance of xProgress created using Initialize-xProgress
+        Writes powershell progress output using Write-Progress based on an instance of xProgress created using New-xProgress
     .DESCRIPTION
-        Writes powershell progress output using Write-Progress based on a previous Initialize-xProgress identity
+        Writes powershell progress output using Write-Progress based on a previous New-xProgress identity
     .EXAMPLE
         Write-xProgress -Identity $xProgressID
         calls Write-Progress with previously defined activity and automatically generated counter, progress, and seconds remaining
@@ -259,7 +259,7 @@ Function Write-xProgress
     [cmdletbinding()]
     param(
         [parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName)]
-        [guid[]]$Identity #GUID or GUID string provided from a previously run Initialize-xProgress
+        [guid[]]$Identity #GUID or GUID string provided from a previously run New-xProgress
     )
 
     process
@@ -319,9 +319,9 @@ Function Complete-xProgress
 {
     <#
     .SYNOPSIS
-        Completes xProgress for a specific xProgress identity created by Initialize-xProgress
+        Completes xProgress for a specific xProgress identity created by New-xProgress
     .DESCRIPTION
-        Completes xProgress for a specific xProgress identity created by Initialize-xProgress.
+        Completes xProgress for a specific xProgress identity created by New-xProgress.
         Removes the progress bar display in Powershell by calling Write-Progress with -Complete parameter.
         Removes the xProgress identity from xProgress module memory
     .EXAMPLE
@@ -359,5 +359,6 @@ Function Complete-xProgress
             $script:ProgressTracker.remove($ProgressGUID)
         }
     }
-
 }
+
+New-Alias -Name Initialize-xProgress -Value New-xProgress
