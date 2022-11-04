@@ -343,7 +343,7 @@ Function Complete-xProgress
             $ProgressGUID = $i.guid #set the ProgressGUID to the string represenation of the Identity GUID
             $xPi = $script:ProgressTracker.$($ProgressGUID)
             $xPi.Stopwatch.Stop() #stop the stopwatch
-            $elapsedSeconds = [math]::Ceiling($xProgessInstance.Stopwatch.elapsed.TotalSeconds)
+            $elapsedSeconds = [math]::Ceiling($xPi.Stopwatch.elapsed.TotalSeconds)
             $wpParams = @{
                 Activity         = $xPi.Activity
                 PercentComplete  = 100
