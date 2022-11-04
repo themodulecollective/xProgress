@@ -354,7 +354,7 @@ Function Complete-xProgress
             #Remove progress bar
             Write-Progress @wpParams -Completed
             Write-Information -MessageData "Completing xProgress Instance: $ProgressGUID"
-            $xPi | Select-Object -Property *,@{n = 'ElapsedSeconds'; e = {$elapsedSeconds} } | Write-Information
+            Write-Information -MessageData $($xPi | Select-Object -Property *,@{n = 'ElapsedSeconds'; e = {$elapsedSeconds} } )
             #Remove Progress Identity GUID
             $script:ProgressTracker.remove($ProgressGUID)
         }
