@@ -48,3 +48,4 @@ Complete-xProgress -Identity $xProgressId
 
 - add/extend functions for Job Progress display
 - extend Set-xProgress to include adjustment of progress interval using -CalculatedProgressInterval and/or -ExplicitProgressInterval
+- Add a switch to New-xProgress to support creating the instance but not yet starting the stopwatch.  Add Start-xProgress and Stop-xProgress to support starting and stopping the stopwatch.  This would allow creation of a hierarchy of xProgress instances in one place in a function or script to be activated as needed. This also enables some advanced functionality with Parent/Child scenarios for automation of stages/steps.
