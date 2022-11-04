@@ -18,8 +18,8 @@ Complete-xProgress
 
 ## Examples
 
+### Basic Usage
 ```powershell
-
 $xProgressID = New-xProgress -ArrayToProcess $MyListOfItems -CalculatedProgressInterval 1Percent -Activity "Process MyListOfItems"
 #Sets up xProgress to display progress for a looped operation on $MyListOfItems.  When Write-xProgress is called will update progress at each one percent increment of processing and will use -activity as the activity for Write-Progress.
 
@@ -35,6 +35,42 @@ foreach ($i in $MyListOfItems)
 Complete-xProgress -Identity $xProgressId
 #removes the progress bar from display (calls Write-Progress with -Complete parameter for the specified Identity) and removes the xProgressId from xProgress module memory
 
+```
+
+### Parent/Child Usage
+
+```powershell
+
+$PxPID = New-xProgress -ArrayToProcess @(1,2,3) -CalculatedProgressInterval Each -Status 'Step 1 of 3: Get MyListofItems'
+Write-xProgress -Identity $PxPID
+
+#if appropriate a child xProgress could be created here
+$MyListOfItems = @(
+
+    #some code that retrieve my list of items
+    #a child xProgress could be displayed here
+)
+# a child xProgress bar could be completed here
+
+Set-xProgress -Identity $PxPID -Status 'Step 2 of 3: Process MyListOfItems'
+Write-xProgress -Identity $PxPID
+$CxPID = New-xProgress -ArrayToProcess $MyListOfItems -CalculatedProgressInterval 1Percent -Activity "Process MyListOfItems" -xParentID $PxPID
+foreach ($i in $MyListOfItems)
+{
+    Write-xProgress -Identity $CxPID
+    # displays progress bar indented under parent progress bar
+}
+Complete-xProgress -Identity $CxPID
+#completes the child progress bar
+
+Set-xProgress -Identity $PxPID -Status 'Step 3 of 3: Export MyListOfItems'
+Write-xProgress -Identity $PxPID
+
+# Code that exports MyListOfItems
+# if appropriate this could contain another child progress bar
+
+Complete-xProgress -Identity $PxPID
+#completes the parent progress bar
 ```
 
 ## Releases
