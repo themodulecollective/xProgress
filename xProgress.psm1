@@ -288,8 +288,8 @@ Function Write-xProgress
                 $elapsedSeconds = [math]::Ceiling($xPi.Stopwatch.elapsed.TotalSeconds)
                 $secondsPerItem = [math]::Ceiling($elapsedSeconds/$counter)
                 $secondsRemaining = $($xPi.total - $counter) * $secondsPerItem
-                $CurrentOperation = switch ($xPi.CurrentOperationType) {'Automatic' {"Processing $counter through $progressItem of $($xPi.total)"} 'Specified' {$xProgessInstance.CurrentOperation} }
                 $progressItem = $counter + $progressInterval - 1
+                $CurrentOperation = switch ($xPi.CurrentOperationType) {'Automatic' {"Processing $counter through $progressItem of $($xPi.total)"} 'Specified' {$xProgessInstance.CurrentOperation} }
                 $wpParams = @{
                     Activity         = $xPi.Activity
                     CurrentOperation = $CurrentOperation
