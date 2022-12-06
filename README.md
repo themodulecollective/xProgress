@@ -74,7 +74,10 @@ Complete-xProgress -Identity $PxPID
 ```
 
 ## Releases
-
+0.0.8 bug fix for progress status "item x of y of total z" where y was not getting a value
+0.0.7 bug fix for Complete-xProgress preventing elapsed seconds from appearing in Write-Information output (when information stream is visible/consumed)
+0.0.6 compatibility fix for Windows PowerShell 5.1 Write-Information (does not accept pipeline input)
+0.0.5 renamed initialize-xProgress to New-xProgress.  Added alias Initialize-xProgress
 0.0.4 add -decrementCounter to Set-xProgress
 0.0.3 new functions: Get-xProgress, Set-xProgress.  New functionality: Parent/Child progress bars
 0.0.2 bug fixes
