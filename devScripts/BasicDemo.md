@@ -2,9 +2,9 @@
 
 ## Intro
 
-Mike Campbell
-@thatexactmike
-exactmike on github
+- Mike Campbell - Solutions Architect - M365/Azure AD Focus
+- @thatexactmike
+- exactmike on github
 
 ## Problem
 
