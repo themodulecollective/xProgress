@@ -2,7 +2,7 @@
 
 ## Intro
 
-- Mike Campbell - Solutions Architect - M365/Azure AD Focus
+- Mike Campbell - Senior Solutions Architect - M365/Azure AD Focus
 - @thatexactmike
 - exactmike on github
 
