@@ -37,5 +37,6 @@ Complete-xProgress -Identity $xProgressID
 
 ## Features not demonstrated
 
+- CalculatedProgressInterval parameteter (based on pre-defined percentages of progress by item count)
 - Parent / Child xProgress bars
 - Modification of Progress bar using Set-xProgress (useful for monitoring stages of operation)
