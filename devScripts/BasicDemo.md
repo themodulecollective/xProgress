@@ -19,7 +19,7 @@ xProgress Module
 ``` PowerShell
 
 Install-Module xProgress -Scope AllUsers
-$pictures = get-childitem "C:\Users\MikeCampbell\OneDrive - Exact Solutions\Pictures\ByDate" -Recurse
+$pictures = get-childitem $ByDatePicturesPath -Recurse
 $Pictures.count
 $PSStyle.Progress.View = 'Classic'
 $xProgressID = New-xProgress `
