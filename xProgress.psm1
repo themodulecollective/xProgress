@@ -116,7 +116,7 @@ Function New-xProgress
         CurrentOperation     = $CurrentOperation
         ProgressInterval     = $Interval
         Total                = $total
-        Stopwatch            = [System.Diagnostics.Stopwatch]::StartNew()
+        Stopwatch            = [System.Diagnostics.Stopwatch]::New()
         Counter              = 0
         ParentID             = $ParentId
         xParentIdentity      = $xPPID
@@ -281,10 +281,15 @@ Function Write-xProgress
             $xPi.Counter++ #advance the counter
             $counter = $xPi.Counter #capture the current counter
             $progressInterval = $xPi.ProgressInterval #get the progressInterval for the modulus check
+            #start the timer when the first item is processed
+            if ($counter -eq 1)
+            {
+                $xPi.Stopwatch.Start()
+            }
 
             if ($counter % $progressInterval -eq 0 -or $counter -eq 1)
             {
-                #modulus check passed so w
+                # modulus check passed so write-progress this time
                 $elapsedSeconds = [math]::Ceiling($xPi.Stopwatch.elapsed.TotalSeconds)
                 $secondsPerItem = [math]::Ceiling($elapsedSeconds/$counter)
                 $secondsRemaining = $($xPi.total - $counter) * $secondsPerItem
