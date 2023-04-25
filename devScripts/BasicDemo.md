@@ -18,15 +18,20 @@
 https://github.com/themodulecollective/xProgress/
 
 ``` PowerShell
-
+# install module
 Install-Module xProgress -Scope AllUsers
+
 $pictures = get-childitem $ByDatePicturesPath -Recurse
 $Pictures.count
 $PSStyle.Progress.View = 'Classic'
+
+# create an xProgress instance
 $xProgressID = New-xProgress `
 -ArrayToProcess $pictures `
 -ExplicitProgressInterval 1000 `
 -Activity "Process Pictures" -status "First Stage"
+
+# use the xProgress instance
 foreach ($i in $pictures)
 {
     Write-xProgress -Identity $xProgressID
