@@ -14,7 +14,7 @@
 
 ## Solution
 
-xProgress Module
+[xProgress Module](https://github.com/themodulecollective/xProgress/)
 
 ``` PowerShell
 
