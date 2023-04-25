@@ -85,6 +85,7 @@ Complete-xProgress -Identity $PxPID
 ```
 
 ## Releases
+0.0.9 fix to start stopwatch at first call of write-xprogress for given xProgress instance.  Makes for more optimal time remaining calculation.
 0.0.8 bug fix for progress status "item x of y of total z" where y was not getting a value
 0.0.7 bug fix for Complete-xProgress preventing elapsed seconds from appearing in Write-Information output (when information stream is visible/consumed)
 0.0.6 compatibility fix for Windows PowerShell 5.1 Write-Information (does not accept pipeline input)
