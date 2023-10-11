@@ -260,6 +260,8 @@ Function Write-xProgress
     param(
         [parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName)]
         [guid[]]$Identity #GUID or GUID string provided from a previously run New-xProgress
+        ,
+        [switch]$DoNotIncrement #Do not increment the progress counter - for situations where you call Write-xProgress more than once during the processing of an item, for example, to update status or activity, but do not want to increment the counter.
     )
 
     process
@@ -278,7 +280,13 @@ Function Write-xProgress
                     throw("No xProgress Instance found for identity $ProgressGUID")
                 }
             }
-            $xPi.Counter++ #advance the counter
+            switch ($DoNotIncrement)
+            {
+                $true
+                {}
+                $false
+                {$xPi.Counter++ #advance the counter}
+            }
             $counter = $xPi.Counter #capture the current counter
             $progressInterval = $xPi.ProgressInterval #get the progressInterval for the modulus check
             #start the timer when the first item is processed
@@ -298,7 +306,7 @@ Function Write-xProgress
                 $wpParams = @{
                     Activity         = $xPi.Activity
                     CurrentOperation = $CurrentOperation
-                    PercentComplete  = $counter/$xPi.total * 100
+                    PercentComplete  = switch ($counter/$xPi.total * 100) {{$_ -gt 100} {100; Write-Warning -Message 'PercentComplete value over 100 has been suppressed' } default {$_} }
                     SecondsRemaining = $secondsRemaining
                     ID               = $xPi.ID
                     ParentID         = $xPi.ParentID

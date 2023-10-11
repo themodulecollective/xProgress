@@ -70,6 +70,9 @@ foreach ($i in $MyListOfItems)
 {
     Write-xProgress -Identity $CxPID
     # displays progress bar indented under parent progress bar
+    Set-xProgress -Identity $CxPID -CurrentOperation 'cleaning up'
+    Write-xProgress -Identity $CxPID -DoNotIncrement
+    # displays progress bar again but without incrementing the counter
 }
 Complete-xProgress -Identity $CxPID
 #completes the child progress bar
@@ -85,6 +88,7 @@ Complete-xProgress -Identity $PxPID
 ```
 
 ## Releases
+0.0.10 workaround/fix for situations where write-xprogress is being used more than once for an item in a processing loop.  The counter was incrementing with every call of write-xprogress which needs to be suppressed in this case.  the DoNotIncrement switch parameter was added. Also added a failsafe to write-xprogress in case of error with percent complete values greater than 100.  Write-xprogress will override values over 100 with 100 and throw a warning.  
 0.0.9 fix to start stopwatch at first call of write-xprogress for given xProgress instance.  Makes for more optimal time remaining calculation.
 0.0.8 bug fix for progress status "item x of y of total z" where y was not getting a value
 0.0.7 bug fix for Complete-xProgress preventing elapsed seconds from appearing in Write-Information output (when information stream is visible/consumed)

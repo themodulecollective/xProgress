@@ -10,7 +10,7 @@
 
 1. I wanted to use Write-Progress more consistently in my modules and especially with long running functions and scripts.
 2. I wanted to use "advanced" features of Write-Progress such as time remaining and parent/child progress.
-3. I wanted to do 1 and 2 without re-writing the required logic
+3. I wanted to do 1 and 2 without re-writing the required logic everytime I wrote a new function or module
 
 ## Solution
 
