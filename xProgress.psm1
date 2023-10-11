@@ -285,7 +285,7 @@ Function Write-xProgress
                 $true
                 {}
                 $false
-                {$xPi.Counter++ #advance the counter}
+                {$xPi.Counter++} #advance the counter
             }
             $counter = $xPi.Counter #capture the current counter
             $progressInterval = $xPi.ProgressInterval #get the progressInterval for the modulus check
@@ -306,7 +306,17 @@ Function Write-xProgress
                 $wpParams = @{
                     Activity         = $xPi.Activity
                     CurrentOperation = $CurrentOperation
-                    PercentComplete  = switch ($counter/$xPi.total * 100) {{$_ -gt 100} {100; Write-Warning -Message 'PercentComplete value over 100 has been suppressed' } default {$_} }
+                    PercentComplete  =
+                        switch ($counter/$xPi.total * 100)
+                        {
+                            {$_ -gt 100}
+                            {
+                                100
+                                Write-Warning -Message 'PercentComplete value over 100 has been suppressed'
+                            }
+                            default
+                            {$_}
+                        }
                     SecondsRemaining = $secondsRemaining
                     ID               = $xPi.ID
                     ParentID         = $xPi.ParentID
