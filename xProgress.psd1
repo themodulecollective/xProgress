@@ -12,7 +12,7 @@
     RootModule        = 'xProgress.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '0.0.11'
+    ModuleVersion     = '0.0.12'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -27,7 +27,7 @@
     CompanyName       = 'themodulecollective'
 
     # Copyright statement for this module
-    Copyright         = '2022'
+    Copyright         = '2026'
 
     # Description of the functionality provided by this module
     Description       = 'xProgress module provides functions to enable progress display in Powershell functions, modules, and scripts where progress intervals are used to write progress for intervals other than every record (for performance reasons as Write-Progress is expensive to performance) and to automatically provide counter and timer functionality for percentage complete and seconds remaining calculations.'

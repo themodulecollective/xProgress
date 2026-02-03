@@ -5,9 +5,9 @@ Function New-xProgress
 {
     <#
     .SYNOPSIS
-        Initializes an instance of xProgress for later display using Write-xProgess
+        Initializes an instance of xProgress for later display using Write-xProgress
     .DESCRIPTION
-        Initializes an instance of xProgress for later display using Write-xProgess.
+        Initializes an instance of xProgress for later display using Write-xProgress.
         Automatically sets up counters, timers, and incremental progress tracking.
         Can show progress only at a selected interval to improve performance (write-progress is expensive).
     .EXAMPLE
@@ -211,7 +211,7 @@ Function Set-xProgress
                 'Status'
                 {
                     $xPi.Status = $Status
-                    $xPI.StatusType = 'Specified'
+                    $xPi.StatusType = 'Specified'
                 }
                 'CurrentOperation'
                 {
@@ -236,7 +236,14 @@ Function Set-xProgress
                 {
                     if ($true -eq $DecrementCounter)
                     {
-                        $xPi.Counter--
+                        if ($xPi.Counter -gt 0)
+                        {
+                            $xPi.Counter--
+                        }
+                        else
+                        {
+                            Write-Warning -Message "Counter for xProgress Instance $($xPi.Identity) is already at $($xPi.Counter); decrement skipped"
+                        }
                     }
                 }
             }
@@ -302,7 +309,7 @@ Function Write-xProgress
                 $secondsPerItem = [math]::Ceiling($elapsedSeconds/$counter)
                 $secondsRemaining = $($xPi.total - $counter) * $secondsPerItem
                 $progressItem = $counter + $progressInterval - 1
-                $CurrentOperation = switch ($xPi.CurrentOperationType) {'Automatic' {"Processing $counter through $progressItem of $($xPi.total)"} 'Specified' {$xProgessInstance.CurrentOperation} }
+                $CurrentOperation = switch ($xPi.CurrentOperationType) {'Automatic' {"Processing $counter through $progressItem of $($xPi.total)"} 'Specified' {$xPi.CurrentOperation} }
                 $wpParams = @{
                     Activity         = $xPi.Activity
                     CurrentOperation = $CurrentOperation
@@ -364,22 +371,33 @@ Function Complete-xProgress
         foreach ($i in $Identity)
         {
             $ProgressGUID = $i.guid #set the ProgressGUID to the string represenation of the Identity GUID
-            $xPi = $script:ProgressTracker.$($ProgressGUID)
-            $xPi.Stopwatch.Stop() #stop the stopwatch
-            $elapsedSeconds = [math]::Ceiling($xPi.Stopwatch.elapsed.TotalSeconds)
-            $wpParams = @{
-                Activity         = $xPi.Activity
-                PercentComplete  = 100
-                SecondsRemaining = 0
-                Id               = $Script:ProgressTracker.$($ProgressGUID).Id
-                ParentID         = $Script:ProgressTracker.$($ProgressGUID).ParentId
+            switch ($Script:ProgressTracker.containsKey($ProgressGUID))
+            {
+                $true
+                {
+                    $xPi = $script:ProgressTracker.$($ProgressGUID)
+                    $xPi.Stopwatch.Stop() #stop the stopwatch
+                    $elapsedSeconds = [math]::Ceiling($xPi.Stopwatch.elapsed.TotalSeconds)
+                    $wpParams = @{
+                        Activity         = $xPi.Activity
+                        PercentComplete  = 100
+                        SecondsRemaining = 0
+                        Id               = $xPi.Id
+                        ParentID         = $xPi.ParentId
+                    }
+                    #Remove progress bar
+                    Write-Progress @wpParams -Completed
+                    Write-Information -MessageData "Completing xProgress Instance: $ProgressGUID"
+                    Write-Information -MessageData $($xPi | Select-Object -Property *,@{n = 'ElapsedSeconds'; e = {$elapsedSeconds} } )
+                    #Remove Progress Identity GUID
+                    $script:ProgressTracker.remove($ProgressGUID)
+
+                }
+                $false
+                {
+                    Write-Warning -Message "No xProgress Instance found for identity $ProgressGUID"
+                }
             }
-            #Remove progress bar
-            Write-Progress @wpParams -Completed
-            Write-Information -MessageData "Completing xProgress Instance: $ProgressGUID"
-            Write-Information -MessageData $($xPi | Select-Object -Property *,@{n = 'ElapsedSeconds'; e = {$elapsedSeconds} } )
-            #Remove Progress Identity GUID
-            $script:ProgressTracker.remove($ProgressGUID)
         }
     }
 }
