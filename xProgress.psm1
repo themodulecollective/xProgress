@@ -257,7 +257,7 @@ Function Write-xProgress
     .SYNOPSIS
         Writes powershell progress output using Write-Progress based on an instance of xProgress created using New-xProgress
     .DESCRIPTION
-        Writes powershell progress output using Write-Progress based on a previous New-xProgress identity
+        Writes powershell progress output using Write-Progress based on a previous New-xProgress identity.  If the Progress instance timer is not started, this also starts the timer for the first item in the counter.
     .EXAMPLE
         Write-xProgress -Identity $xProgressID
         calls Write-Progress with previously defined activity and automatically generated counter, progress, and seconds remaining
@@ -268,7 +268,11 @@ Function Write-xProgress
         [parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName)]
         [guid[]]$Identity #GUID or GUID string provided from a previously run New-xProgress
         ,
+        [parameter()]
         [switch]$DoNotIncrement #Do not increment the progress counter - for situations where you call Write-xProgress more than once during the processing of an item, for example, to update status or activity, but do not want to increment the counter.
+        ,
+        [parameter()] #use in a case where you are writing progress but don't want to do the initial start of the timer for the progress instance
+        [switch]$DoNotStartTimer
     )
 
     process
@@ -297,7 +301,7 @@ Function Write-xProgress
             $counter = $xPi.Counter #capture the current counter
             $progressInterval = $xPi.ProgressInterval #get the progressInterval for the modulus check
             #start the timer when the first item is processed
-            if ($counter -eq 1)
+            if ($counter -eq 1 -and $false -eq $xPi.Stopwatch.IsRunning -and $true -ne $DoNotStartTimer)
             {
                 $xPi.Stopwatch.Start()
             }
