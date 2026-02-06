@@ -88,17 +88,22 @@ Complete-xProgress -Identity $PxPID
 ```
 
 ## Releases
+0.0.13 New Functionality for managing complex timers when required by your scenario
 
-0.0.12
+- Set-xProgress interval adjustment: Added -CalculatedProgressInterval and -ExplicitProgressInterval parameters to dynamically change the progress update frequency on an existing xProgress instance
+- Stopwatch lifecycle management - Three new functions for manual timer control and an adjustment to Write-xProgress to support.
+  - Start-xProgress - Start the stopwatch before the first Write-xProgress call
+  - Suspend-xProgress - Pause the stopwatch to exclude wait times from elapsed calculations
+  - Resume-xProgress - Resume a paused stopwatch
+  - Write-xProgress -DoNotStartTimer switch - Prevents auto-starting the timer on first write when using manual stopwatch control
 
-### Bug Fixes
+0.0.12 Bug Fixes
 
 - Write-xProgress: Fixed undefined variable - Corrected $xProgressInstance to $xPi when retrieving specified CurrentOperation, fixing null output in progress bar.
 - Set-xProgress: Fixed StatusType not persisting - Corrected variable case inconsistency ($xPI → $xPi) so StatusType is properly updated when setting Status.
 - Complete-xProgress: Added GUID validation - Function now validates that the provided Identity exists in the progress tracker before processing. Invalid GUIDs now produce a clear warning message instead of a  null reference error.
 - Set-xProgress: DecrementCounter guard - The -DecrementCounter switch now validates that the counter is greater than zero before decrementing. If the counter is already at zero, a warning is issued and the
   decrement is skipped, preventing negative counter values.
-
 0.0.11 fix for the fix
 0.0.10 workaround/fix for situations where write-xprogress is being used more than once for an item in a processing loop.  The counter was incrementing with every call of write-xprogress which needs to be suppressed in this case.  the DoNotIncrement switch parameter was added. Also added a failsafe to write-xprogress in case of error with percent complete values greater than 100.  Write-xprogress will override values over 100 with 100 and throw a warning.
 0.0.9 fix to start stopwatch at first call of write-xprogress for given xProgress instance.  Makes for more optimal time remaining calculation.

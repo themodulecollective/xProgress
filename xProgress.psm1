@@ -42,8 +42,12 @@ Function New-xProgress
         [parameter()]
         [string]$Status #Displayed in the progress bar Status field (passed through to Write-Progress -Status). This is displayed below the Activity but above the progress bar. Overrides the automatically generated xProgress status which is NULL unless Parent/Child xProgress instances are configured.
         ,
+        # Displayed in the progress bar Status field (passed through to Write-Progress -Status).
+        # This is displayed below the Activity but above the progress bar.
+        # Overrides the automatically generated xProgress CurrentOperation.
+        # Automatically generated Current Operation shows "Processing [CurrentFirstItemCount] through [CurrentBatchCount] of [TotalItemsCount]"
         [parameter()]
-        [string]$CurrentOperation #Displayed in the progress bar Status field (passed through to Write-Progress -Status). This is displayed below the Activity but above the progress bar. Overrides the automatically generated xProgress CurrentOperation.
+        [string]$CurrentOperation
         ,
         [parameter()]
         [int32]$Id #Manually set the Id for Write-Progress, if desired.  Otherwise xProgress will automatically set the ID to an incrementing value.
@@ -195,6 +199,15 @@ Function Set-xProgress
         ,
         [parameter()]
         [switch]$DecrementCounter
+        ,
+        [parameter()]
+        [alias('CalculatedInterval','CPI')]
+        [ValidateSet('1Percent','10Percent','20Percent','25Percent','Each')]
+        [string]$CalculatedProgressInterval
+        ,
+        [parameter()]
+        [alias('ExplicitInterval','EPI')]
+        [int32]$ExplicitProgressInterval
     )
 
     process
@@ -244,6 +257,30 @@ Function Set-xProgress
                         {
                             Write-Warning -Message "Counter for xProgress Instance $($xPi.Identity) is already at $($xPi.Counter); decrement skipped"
                         }
+                    }
+                }
+                'CalculatedProgressInterval'
+                {
+                    $total = $xPi.Total
+                    $divisor = switch ($CalculatedProgressInterval)
+                    {
+                        '1Percent'  {100}
+                        '10Percent' {10}
+                        '20Percent' {5}
+                        '25Percent' {4}
+                        'Each'      {$total}
+                    }
+                    $xPi.ProgressInterval = [math]::Ceiling($total / $divisor)
+                }
+                'ExplicitProgressInterval'
+                {
+                    if ($ExplicitProgressInterval -gt $xPi.Total)
+                    {
+                        Write-Warning -Message "ExplicitProgressInterval $ExplicitProgressInterval is greater than total count $($xPi.Total); interval not changed"
+                    }
+                    else
+                    {
+                        $xPi.ProgressInterval = $ExplicitProgressInterval
                     }
                 }
             }
@@ -396,6 +433,144 @@ Function Complete-xProgress
                     #Remove Progress Identity GUID
                     $script:ProgressTracker.remove($ProgressGUID)
 
+                }
+                $false
+                {
+                    Write-Warning -Message "No xProgress Instance found for identity $ProgressGUID"
+                }
+            }
+        }
+    }
+}
+
+Function Start-xProgress
+{
+    <#
+    .SYNOPSIS
+        Starts the stopwatch for an xProgress instance
+    .DESCRIPTION
+        Starts the stopwatch for an xProgress instance. Use this to begin timing before
+        the first Write-xProgress call, or after creating an instance for later use.
+    .EXAMPLE
+        Start-xProgress -Identity $xProgressID
+        Starts the stopwatch for the identified xProgress instance
+    #>
+    [cmdletbinding()]
+    param(
+        [parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName)]
+        [guid[]]$Identity
+    )
+
+    process
+    {
+        foreach ($i in $Identity)
+        {
+            $ProgressGUID = $i.guid
+            switch ($Script:ProgressTracker.containsKey($ProgressGUID))
+            {
+                $true
+                {
+                    $xPi = $script:ProgressTracker.$($ProgressGUID)
+                    if ($xPi.Stopwatch.IsRunning)
+                    {
+                        Write-Warning -Message "Stopwatch for xProgress Instance $ProgressGUID is already running"
+                    }
+                    else
+                    {
+                        $xPi.Stopwatch.Start()
+                    }
+                }
+                $false
+                {
+                    Write-Warning -Message "No xProgress Instance found for identity $ProgressGUID"
+                }
+            }
+        }
+    }
+}
+
+Function Suspend-xProgress
+{
+    <#
+    .SYNOPSIS
+        Suspends (pauses) the stopwatch for an xProgress instance
+    .DESCRIPTION
+        Pauses the stopwatch for an xProgress instance. Use Resume-xProgress to continue timing.
+        Useful for excluding wait times or external operations from elapsed time calculations.
+    .EXAMPLE
+        Suspend-xProgress -Identity $xProgressID
+        Pauses the stopwatch for the identified xProgress instance
+    #>
+    [cmdletbinding()]
+    param(
+        [parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName)]
+        [guid[]]$Identity
+    )
+
+    process
+    {
+        foreach ($i in $Identity)
+        {
+            $ProgressGUID = $i.guid
+            switch ($Script:ProgressTracker.containsKey($ProgressGUID))
+            {
+                $true
+                {
+                    $xPi = $script:ProgressTracker.$($ProgressGUID)
+                    if ($xPi.Stopwatch.IsRunning)
+                    {
+                        $xPi.Stopwatch.Stop()
+                    }
+                    else
+                    {
+                        Write-Warning -Message "Stopwatch for xProgress Instance $ProgressGUID is not running"
+                    }
+                }
+                $false
+                {
+                    Write-Warning -Message "No xProgress Instance found for identity $ProgressGUID"
+                }
+            }
+        }
+    }
+}
+
+Function Resume-xProgress
+{
+    <#
+    .SYNOPSIS
+        Resumes a suspended stopwatch for an xProgress instance
+    .DESCRIPTION
+        Resumes a previously suspended stopwatch for an xProgress instance.
+        Elapsed time continues from where it was paused.
+    .EXAMPLE
+        Resume-xProgress -Identity $xProgressID
+        Resumes the stopwatch for the identified xProgress instance
+    #>
+    [cmdletbinding()]
+    param(
+        [parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName)]
+        [guid[]]$Identity
+    )
+
+    process
+    {
+        foreach ($i in $Identity)
+        {
+            $ProgressGUID = $i.guid
+            switch ($Script:ProgressTracker.containsKey($ProgressGUID))
+            {
+                $true
+                {
+                    $xPi = $script:ProgressTracker.$($ProgressGUID)
+                    if ($xPi.Stopwatch.IsRunning)
+                    {
+                        Write-Warning -Message "Stopwatch for xProgress Instance $ProgressGUID is already running"
+                    }
+                    else
+                    {
+                        $xPi.Stopwatch.Start()
+                    }
                 }
                 $false
                 {
