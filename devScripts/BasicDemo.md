@@ -3,7 +3,7 @@
 ## Intro
 
 - Mike Campbell - Senior Solutions Architect - M365/Azure AD Focus
-- @thatexactmike
+- @thatexactmike on X
 - exactmike on github
 
 ## Problem

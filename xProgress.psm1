@@ -52,14 +52,14 @@ Function New-xProgress
         [parameter()]
         [int32]$Id #Manually set the Id for Write-Progress, if desired.  Otherwise xProgress will automatically set the ID to an incrementing value.
         ,
-        [parameter(ParameterSetName = 'CI-MPC')]
-        [parameter(ParameterSetName = 'EI-MPC')]
-        [int32]$ParentId #Manually set the ParentId for Write-Progress, if desired. Otherwise xProgress will automatically set the ParentID to -1 (no parent) unless you are using the -xParent parameter for xProgress managed ParentIDs.
-        ,
         [parameter(Mandatory,ParameterSetName = 'CI-xPC')]
         [parameter(Mandatory,ParameterSetName = 'EI-xPC')]
         [alias('xPPID')]
         [guid]$xParentIdentity #Set another xProgress Instance as the parent of this new xProgress instance for progress bar nesting
+        ,
+        [parameter(ParameterSetName = 'CI-MPC')]
+        [parameter(ParameterSetName = 'EI-MPC')]
+        [int32]$ParentId #Manually set the ParentId for Write-Progress, if desired. Otherwise xProgress will automatically set the ParentID to -1 (no parent) unless you are using the -xParent parameter for xProgress managed ParentIDs.
     )
 
     $ProgressGuid = $(New-Guid).guid
@@ -458,7 +458,7 @@ Function Start-xProgress
     [cmdletbinding()]
     param(
         [parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName)]
-        [guid[]]$Identity
+        [guid[]]$Identity #GUID or GUID string provided from a previously run New-xProgress
     )
 
     process
@@ -504,7 +504,7 @@ Function Suspend-xProgress
     [cmdletbinding()]
     param(
         [parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName)]
-        [guid[]]$Identity
+        [guid[]]$Identity #GUID or GUID string provided from a previously run New-xProgress
     )
 
     process
@@ -550,7 +550,7 @@ Function Resume-xProgress
     [cmdletbinding()]
     param(
         [parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName)]
-        [guid[]]$Identity
+        [guid[]]$Identity #GUID or GUID string provided from a previously run New-xProgress
     )
 
     process
