@@ -38,7 +38,7 @@ foreach ($i in $MyListOfItems)
     Write-xProgress -Identity $xProgressID
     # Do some things
     Set-xProgress -Identity $xProgressID -Status 'Final Phase'
-    Write-xProgress -Identity $xProgressID
+    Write-xProgress -Identity $xProgressID -DoNotIncrement
 }
 
 # determines if Write-Progress should be called for this iteration using the previously defined
@@ -55,7 +55,7 @@ Complete-xProgress -Identity $xProgressId
 
 ```powershell
 
-$PxPID = New-xProgress -ArrayToProcess @(1,2,3) -CalculatedProgressInterval Each -Status 'Step 1 of 3: Get MyListofItems'
+$PxPID = New-xProgress -ArrayToProcess @(1,2,3) -CalculatedProgressInterval Each -Activity "Multi-Stage Process" -Status 'Step 1 of 3: Get MyListofItems'
 Write-xProgress -Identity $PxPID
 
 #if appropriate a child xProgress could be created here
@@ -68,7 +68,7 @@ $MyListOfItems = @(
 
 Set-xProgress -Identity $PxPID -Status 'Step 2 of 3: Process MyListOfItems'
 Write-xProgress -Identity $PxPID
-$CxPID = New-xProgress -ArrayToProcess $MyListOfItems -CalculatedProgressInterval 1Percent -Activity "Process MyListOfItems" -xParentID $PxPID
+$CxPID = New-xProgress -ArrayToProcess $MyListOfItems -CalculatedProgressInterval 1Percent -Activity "Process MyListOfItems" -xParentIdentity $PxPID
 foreach ($i in $MyListOfItems)
 {
     Write-xProgress -Identity $CxPID
@@ -141,7 +141,7 @@ Complete-xProgress -Identity $xProgressID
 
 ## Releases
 
-0.0.13 New Functionality for managing complex timers when required by your scenario
+0.1.0 New Functionality for managing complex timers when required by your scenario
 
 - Set-xProgress interval adjustment: Added -CalculatedProgressInterval and -ExplicitProgressInterval parameters to dynamically change the progress update frequency on an existing xProgress instance
 - Stopwatch lifecycle management - Three new functions for manual timer control and an adjustment to Write-xProgress to support.
