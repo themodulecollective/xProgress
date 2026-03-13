@@ -7,7 +7,8 @@ SHORT DESCRIPTION
 
 LONG DESCRIPTION
     Write-Progress is expensive to call on every iteration of a large
-    loop. xProgress solves this in two ways.
+    loop and is complex to manage when fully using it's capabilities.
+    xProgress solves these problems.
 
     Performance
         xProgress throttles Write-Progress calls to configurable
