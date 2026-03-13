@@ -12,7 +12,7 @@
     RootModule        = 'xProgress.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '0.0.13'
+    ModuleVersion     = '0.1.0'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -30,7 +30,7 @@
     Copyright         = '2026'
 
     # Description of the functionality provided by this module
-    Description       = 'xProgress module provides functions to enable progress display in Powershell functions, modules, and scripts where progress intervals are used to write progress for intervals other than every record (for performance reasons as Write-Progress is expensive to performance) and to automatically provide counter and timer functionality for percentage complete and seconds remaining calculations.'
+    Description       = 'xProgress provides throttled, automatically timed progress bars for PowerShell scripts and modules. It solves two problems: performance (Write-Progress is expensive to call on every iteration) and complexity (managing calculations, parent/child relationships, and timer state). Supports calculated and explicit progress intervals, nested parent/child progress bars with automatic ID management, and full stopwatch lifecycle control including suspend and resume.'
 
     # Minimum version of the PowerShell engine required by this module
     PowerShellVersion = '5.1'
@@ -69,7 +69,7 @@
     # NestedModules = @()
 
     # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-    FunctionsToExport = 'New-xProgress', 'Write-xProgress', 'Complete-xProgress', 'Get-xProgress', 'Set-xProgress'
+    FunctionsToExport = 'New-xProgress', 'Write-xProgress', 'Complete-xProgress', 'Get-xProgress', 'Set-xProgress', 'Start-xProgress', 'Suspend-xProgress', 'Resume-xProgress'
 
     # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
     #CmdletsToExport = '*'
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            # ReleaseNotes = ''
+            ReleaseNotes = '0.1.0 - Complete original vision for xProgress. Added Set-xProgress interval adjustment (-CalculatedProgressInterval, -ExplicitProgressInterval) to dynamically change progress update frequency on a running instance. Added stopwatch lifecycle functions: Start-xProgress, Suspend-xProgress, Resume-xProgress. Added Write-xProgress -DoNotStartTimer switch for manual timer control. Added module help (Get-Help about_xProgress).'
 
             # Prerelease string of this module
             # Prerelease = ''

@@ -128,7 +128,7 @@ Function New-xProgress
         Counter              = 0
         ParentID             = $ParentId
         xParentIdentity      = $xPPID
-        ID                   = ++$script:WriteProgressID
+        ID                   = if ($PSBoundParameters.ContainsKey('Id')) { $Id } else { ++$script:WriteProgressID }
         StatusType           = $StatusType
         CurrentOperationType = $CurrentOperationType
     }
@@ -365,13 +365,13 @@ Function Write-xProgress
                 $xPi.Stopwatch.Start()
             }
 
-            if ($counter % $progressInterval -eq 0 -or $counter -eq 1)
+            if (($counter % $progressInterval -eq 0 -or $counter -eq 1) -and $counter -gt 0)
             {
                 # modulus check passed so write-progress this time
                 $elapsedSeconds = [math]::Ceiling($xPi.Stopwatch.elapsed.TotalSeconds)
                 $secondsPerItem = [math]::Ceiling($elapsedSeconds/$counter)
                 $secondsRemaining = $($xPi.total - $counter) * $secondsPerItem
-                $progressItem = $counter + $progressInterval - 1
+                $progressItem = [Math]::Min($counter + $progressInterval - 1, $xPi.total)
                 $CurrentOperation = switch ($xPi.CurrentOperationType) {'Automatic' {"Processing $counter through $progressItem of $($xPi.total)"} 'Specified' {$xPi.CurrentOperation} }
                 $wpParams = @{
                     Activity         = $xPi.Activity
