@@ -144,7 +144,7 @@ Complete-xProgress -Identity $xProgressID
 
 ## Releases
 
-0.1.0 New Functionality for managing complex timers when required by your scenario
+1.0.0 New Functionality for managing complex timers when required by your scenario.  First major release completing the original vision for xProgress
 
 - Set-xProgress interval adjustment: Added -CalculatedProgressInterval and -ExplicitProgressInterval parameters to dynamically change the progress update frequency on an existing xProgress instance
 - Stopwatch lifecycle management - Three new functions for manual timer control and an adjustment to Write-xProgress to support.
@@ -152,6 +152,16 @@ Complete-xProgress -Identity $xProgressID
   - Suspend-xProgress - Pause the stopwatch to exclude wait times from elapsed calculations
   - Resume-xProgress - Resume a paused stopwatch
   - Write-xProgress -DoNotStartTimer switch - Prevents auto-starting the timer on first write when using manual stopwatch control
+- Bux fixes
+  - `-Id` parameter in `New-xProgress` declared but never applied to the
+  instance object. Fixed: now uses provided Id when present.
+  - Division by zero in `Write-xProgress` when `-DoNotIncrement` is used
+  as the first call (Counter=0). `0 % interval = 0` triggered the display
+  block, then `elapsedSeconds / 0` threw. Fixed: added `$counter -gt 0`
+  guard on the display block condition.
+  - Auto-generated `CurrentOperation` text: `$progressItem` was not capped,
+  so batch end count could exceed total (e.g. "101 through 110 of 105").
+  Fixed: `[Math]::Min($counter + $progressInterval - 1, $xPi.total)`
 
 0.0.12 Bug Fixes
 
