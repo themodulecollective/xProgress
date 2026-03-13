@@ -16,6 +16,6 @@ jobs:
         shell: pwsh
         run: |
           New-Item -itemtype directory -path xProgress
-          Move-Item -Path LICENSE,README.md,xProgress.psd1,xProgress.psm1 -Destination xProgress
+          Move-Item -Path LICENSE,README.md,xProgress.psd1,xProgress.psm1,en-us -Destination xProgress
           Get-ChildItem
           Publish-Module -Path ./xProgress/ -NuGetApiKey ${{ secrets.PSGallery_EMPK }} -Verbose
