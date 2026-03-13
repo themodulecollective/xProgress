@@ -1,0 +1,188 @@
+TOPIC
+    about_xProgress
+
+SHORT DESCRIPTION
+    Provides throttled, automatically timed progress bars for PowerShell
+    scripts and modules.
+
+LONG DESCRIPTION
+    Write-Progress is expensive to call on every iteration of a large
+    loop. xProgress solves this in two ways.
+
+    Performance
+        xProgress throttles Write-Progress calls to configurable
+        intervals (e.g. every 1%, every 10 items) while still
+        calculating accurate percentage complete and estimated time
+        remaining for every item processed.
+
+    Complexity
+        Managing progress bar calculations, parent/child relationships,
+        and timer state is handled automatically by xProgress so you do
+        not need to write custom tracking code for each scenario where
+        progress output is needed.
+
+    Each xProgress instance is identified by a GUID returned from
+    New-xProgress. That GUID is passed to all subsequent commands that
+    operate on the instance. All state is maintained inside the module.
+
+PROGRESS INTERVALS
+    Two interval modes are supported.
+
+    Calculated (percentage-based)
+        Pass -CalculatedProgressInterval with one of these values:
+        1Percent, 10Percent, 20Percent, 25Percent, Each.
+
+        The interval item count is derived from the array size at
+        creation. For example, 1Percent on an array of 1,000 items
+        calls Write-Progress every 10 items.
+
+    Explicit (item count-based)
+        Pass -ExplicitProgressInterval with an integer. Write-Progress
+        is called every N items. The value must not exceed the array
+        size.
+
+    The interval on a running instance can be changed at any time with
+    Set-xProgress using either interval parameter.
+
+TIMER MANAGEMENT
+    xProgress uses System.Diagnostics.Stopwatch internally. By default
+    the stopwatch starts automatically on the first Write-xProgress call
+    so that time-remaining reflects actual processing time.
+
+    Start-xProgress
+        Starts the stopwatch before the first Write-xProgress call.
+        Useful when setup work before the loop should be included in
+        elapsed time, or when you are pre-creating a set of instances
+        and want precise control over when timing begins. When using
+        Start-xProgress, pass -DoNotStartTimer to Write-xProgress to
+        prevent a duplicate-start warning.
+
+    Suspend-xProgress / Resume-xProgress
+        Pauses and resumes the stopwatch around operations that should
+        not contribute to elapsed time, such as external API calls, job
+        waits, throttle sleeps, or human input. Excluding these keeps
+        the time-remaining estimate accurate.
+
+NESTED PROGRESS BARS
+    Parent/child progress bar nesting is supported two ways.
+
+    xProgress-managed (recommended)
+        Pass -xParentIdentity (alias: xPPID) to New-xProgress with the
+        parent instance GUID. xProgress resolves the Write-Progress ID
+        relationship automatically.
+
+    Manual
+        Pass -Id and -ParentId integers directly to New-xProgress.
+
+    Always complete child instances before completing the parent.
+
+FUNCTIONS
+    New-xProgress
+        Create and initialize a progress instance. Returns a GUID.
+
+    Get-xProgress
+        Retrieve one or all active instances from module state.
+
+    Write-xProgress
+        Conditionally call Write-Progress and advance the counter.
+        Use -DoNotIncrement to refresh the display without counting the
+        current item twice (e.g. to update CurrentOperation mid-item).
+
+    Set-xProgress
+        Update Activity, Status, CurrentOperation, progress interval,
+        or counter on a running instance. Use -AutomaticStatus or
+        -AutomaticCurrentOperation to revert to auto-generated values.
+
+    Complete-xProgress
+        Finalize display (Write-Progress -Completed), stop the timer,
+        emit elapsed time to the Information stream, and remove the
+        instance from module state.
+
+    Start-xProgress
+        Manually start the instance stopwatch.
+
+    Suspend-xProgress
+        Pause the stopwatch (elapsed time stops accumulating).
+
+    Resume-xProgress
+        Resume a paused stopwatch.
+
+    Initialize-xProgress is an alias for New-xProgress.
+
+EXAMPLES
+    Basic usage
+
+        $id = New-xProgress `
+            -ArrayToProcess $Items `
+            -CalculatedProgressInterval 1Percent `
+            -Activity "Processing Items"
+
+        foreach ($item in $Items)
+        {
+            Write-xProgress -Identity $id
+            # process $item
+        }
+
+        Complete-xProgress -Identity $id
+
+    Updating display text mid-item without advancing the counter
+
+        foreach ($item in $Items)
+        {
+            Write-xProgress -Identity $id
+            # process $item
+            Set-xProgress -Identity $id -CurrentOperation 'Cleanup'
+            Write-xProgress -Identity $id -DoNotIncrement
+            # cleanup work
+        }
+
+    Nested parent/child progress bars
+
+        $pxPID = New-xProgress `
+            -ArrayToProcess @('Get','Process','Export') `
+            -CalculatedProgressInterval Each `
+            -Activity "Multi-Stage Process" `
+            -Status 'Stage 1 of 3: Get Items'
+
+        Write-xProgress -Identity $pxPID
+
+        $cxPID = New-xProgress `
+            -ArrayToProcess $Items `
+            -CalculatedProgressInterval 1Percent `
+            -Activity "Get Items" `
+            -xParentIdentity $pxPID
+
+        foreach ($item in $Items)
+        {
+            Write-xProgress -Identity $cxPID
+        }
+
+        Complete-xProgress -Identity $cxPID
+
+        Set-xProgress -Identity $pxPID -Status 'Stage 2 of 3: Process'
+        Write-xProgress -Identity $pxPID
+        # ... continue stages ...
+        Complete-xProgress -Identity $pxPID
+
+    Excluding wait time from elapsed calculations
+
+        foreach ($item in $Items)
+        {
+            Write-xProgress -Identity $id
+            # active processing
+            Suspend-xProgress -Identity $id
+            Invoke-SlowExternalOperation $item
+            Resume-xProgress -Identity $id
+        }
+
+        Complete-xProgress -Identity $id
+
+SEE ALSO
+    Get-Help New-xProgress
+    Get-Help Write-xProgress
+    Get-Help Set-xProgress
+    Get-Help Complete-xProgress
+    Get-Help Start-xProgress
+    Get-Help Suspend-xProgress
+    Get-Help Resume-xProgress
+    Get-Help Write-Progress

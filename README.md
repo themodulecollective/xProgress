@@ -14,6 +14,9 @@ Get-xProgress
 Write-xProgress
 Set-xProgress
 Complete-xProgress
+Start-xProgress
+Suspend-xProgress
+Resume-xProgress
 ```
 
 ## Examples
@@ -34,7 +37,7 @@ foreach ($i in $MyListOfItems)
 {
     Write-xProgress -Identity $xProgressID
     # Do some things
-    Set-xProgress -Status 'Final Phase'
+    Set-xProgress -Identity $xProgressID -Status 'Final Phase'
     Write-xProgress -Identity $xProgressID
 }
 
@@ -87,7 +90,57 @@ Complete-xProgress -Identity $PxPID
 #completes the parent progress bar
 ```
 
+### Timer Management
+
+#### Excluding wait time from elapsed calculations
+
+When each iteration involves waiting on an external operation (an API call, a job, a sleep) or human input, or a branch to troubleshoot/resolve a problem encountered during normal processing, suspend the stopwatch during the wait so that elapsed time and time-remaining reflect only active processing time.
+
+```powershell
+$xProgressID = New-xProgress `
+    -ArrayToProcess $MyListOfItems `
+    -CalculatedProgressInterval 1Percent `
+    -Activity "Process MyListOfItems"
+
+foreach ($i in $MyListOfItems)
+{
+    Write-xProgress -Identity $xProgressID
+
+    # Active processing
+    $result = Process-Item $i
+
+    # Exclude the wait from elapsed time
+    Suspend-xProgress -Identity $xProgressID
+    Start-Sleep -Seconds 5  # or any slow external call
+    Resume-xProgress -Identity $xProgressID
+}
+
+Complete-xProgress -Identity $xProgressID
+```
+
+#### Pre-starting the timer before the loop
+
+Use `Start-xProgress` to begin timing before the first iteration — useful when setup work before the loop should be included in the elapsed time, or when you want to create all instances upfront and control exactly when each timer starts.
+
+```powershell
+$xProgressID = New-xProgress `
+    -ArrayToProcess $MyListOfItems `
+    -CalculatedProgressInterval 1Percent `
+    -Activity "Process MyListOfItems"
+
+Start-xProgress -Identity $xProgressID  # timer starts here, not on first Write-xProgress
+
+foreach ($i in $MyListOfItems)
+{
+    Write-xProgress -Identity $xProgressID -DoNotStartTimer  # prevents auto-start since timer is already running
+    # Do some things
+}
+
+Complete-xProgress -Identity $xProgressID
+```
+
 ## Releases
+
 0.0.13 New Functionality for managing complex timers when required by your scenario
 
 - Set-xProgress interval adjustment: Added -CalculatedProgressInterval and -ExplicitProgressInterval parameters to dynamically change the progress update frequency on an existing xProgress instance
@@ -118,7 +171,5 @@ Complete-xProgress -Identity $PxPID
 
 ## Development Plans
 
-- extend Set-xProgress to include adjustment of progress interval using -CalculatedInterval and/or -ExplicitInterval
-- Add a switch to New-xProgress to support creating the instance but not yet starting the stopwatch.  Add Start-xProgress and Stop-xProgress to support starting and stopping the stopwatch.  This would allow creation of a hierarchy of xProgress instances in one place in a function or script to be activated as needed. This also enables some advanced functionality with Parent/Child scenarios for automation of stages/steps.
 - add/extend functions for Job Progress display
 - possibly incorporate some gui progress bars like this: https://key2consulting.com/powershell-how-to-display-job-progress/ or https://github.com/Tiberriver256/PoshProgressBar

@@ -17,6 +17,10 @@ Function New-xProgress
         $xProgressID = New-xProgress -ArrayToProcess $MyListOfItems -ExplicitProgressInterval 5 -Activity "Process MyListOfItems"
         Sets up xProgress to display progress for a looped operation on $MyListOfItems.  When Write-xProgress is called will update progress once for each 5 items of processing and will use -activity as the activity for Write-Progress.
         Will throw an error if MyListOfItems is less than 5 items.
+    .EXAMPLE
+        $ParentID = New-xProgress -ArrayToProcess @(1,2,3) -CalculatedProgressInterval Each -Activity "Multi-Stage Process"
+        $ChildID  = New-xProgress -ArrayToProcess $MyListOfItems -CalculatedProgressInterval 1Percent -Activity "Process MyListOfItems" -xParentIdentity $ParentID
+        Creates a nested parent/child pair of progress bars. The child bar is automatically indented beneath the parent in the PowerShell progress display. xProgress manages the Write-Progress ID relationship automatically.
     #>
 
 
@@ -176,6 +180,15 @@ Function Set-xProgress
     .EXAMPLE
         Set-xProgress -Identity $xProgressID -Status 'Final Phase'
         Sets the identified xProgress instance Status to the specified value 'Final Phase'
+    .EXAMPLE
+        Set-xProgress -Identity $xProgressID -AutomaticStatus
+        Resets a previously specified Status back to automatic generation. Use after a stage-specific status is no longer relevant.
+    .EXAMPLE
+        Set-xProgress -Identity $xProgressID -CalculatedProgressInterval 10Percent
+        Dynamically changes the progress update frequency to every 10% on an already-running instance. Useful when processing speed changes significantly mid-loop and you want to adjust update frequency without restarting.
+    .EXAMPLE
+        Set-xProgress -Identity $xProgressID -DecrementCounter
+        Decrements the counter by one. Useful when an iteration is retried and the counter should not advance for that item.
     #>
     [cmdletbinding()]
     param(
@@ -298,6 +311,15 @@ Function Write-xProgress
     .EXAMPLE
         Write-xProgress -Identity $xProgressID
         calls Write-Progress with previously defined activity and automatically generated counter, progress, and seconds remaining
+    .EXAMPLE
+        Write-xProgress -Identity $xProgressID
+        Set-xProgress -Identity $xProgressID -CurrentOperation 'Cleanup'
+        Write-xProgress -Identity $xProgressID -DoNotIncrement
+        Updates the progress display mid-item (e.g. to show a phase change) without advancing the counter. The first Write-xProgress increments and shows initial progress; the second refreshes the display with the new CurrentOperation but does not count the item twice.
+    .EXAMPLE
+        Start-xProgress -Identity $xProgressID
+        Write-xProgress -Identity $xProgressID -DoNotStartTimer
+        Use -DoNotStartTimer when you have already started the stopwatch manually via Start-xProgress. Prevents Write-xProgress from attempting to start a timer that is already running.
     #>
 
     [cmdletbinding()]
@@ -451,9 +473,17 @@ Function Start-xProgress
     .DESCRIPTION
         Starts the stopwatch for an xProgress instance. Use this to begin timing before
         the first Write-xProgress call, or after creating an instance for later use.
+        When using Start-xProgress, pass -DoNotStartTimer to Write-xProgress to prevent
+        it from attempting to auto-start a timer that is already running.
     .EXAMPLE
         Start-xProgress -Identity $xProgressID
         Starts the stopwatch for the identified xProgress instance
+    .EXAMPLE
+        $xProgressID = New-xProgress -ArrayToProcess $MyListOfItems -CalculatedProgressInterval 1Percent -Activity "Process MyListOfItems"
+        Start-xProgress -Identity $xProgressID
+        foreach ($i in $MyListOfItems) { Write-xProgress -Identity $xProgressID -DoNotStartTimer }
+        Complete-xProgress -Identity $xProgressID
+        Starts the timer before the loop so that any pre-loop setup time is excluded from elapsed calculations. -DoNotStartTimer prevents Write-xProgress from re-starting the already-running stopwatch.
     #>
     [cmdletbinding()]
     param(
@@ -496,10 +526,16 @@ Function Suspend-xProgress
         Suspends (pauses) the stopwatch for an xProgress instance
     .DESCRIPTION
         Pauses the stopwatch for an xProgress instance. Use Resume-xProgress to continue timing.
-        Useful for excluding wait times or external operations from elapsed time calculations.
+        Useful for excluding wait times, external operations, or human input from elapsed time
+        and time-remaining calculations.
     .EXAMPLE
         Suspend-xProgress -Identity $xProgressID
         Pauses the stopwatch for the identified xProgress instance
+    .EXAMPLE
+        Suspend-xProgress -Identity $xProgressID
+        Start-Sleep -Seconds 30
+        Resume-xProgress -Identity $xProgressID
+        Excludes a 30-second wait from elapsed time so it does not inflate the time-remaining estimate.
     #>
     [cmdletbinding()]
     param(
@@ -542,10 +578,16 @@ Function Resume-xProgress
         Resumes a suspended stopwatch for an xProgress instance
     .DESCRIPTION
         Resumes a previously suspended stopwatch for an xProgress instance.
-        Elapsed time continues from where it was paused.
+        Elapsed time continues accumulating from where it was paused; the wait period is excluded.
     .EXAMPLE
         Resume-xProgress -Identity $xProgressID
         Resumes the stopwatch for the identified xProgress instance
+    .EXAMPLE
+        Suspend-xProgress -Identity $xProgressID
+        Invoke-SlowExternalOperation
+        Resume-xProgress -Identity $xProgressID
+        Write-xProgress -Identity $xProgressID -DoNotIncrement
+        Resumes timing after an external operation and refreshes the progress display without advancing the counter.
     #>
     [cmdletbinding()]
     param(
