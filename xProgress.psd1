@@ -12,7 +12,7 @@
     RootModule        = 'xProgress.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '1.0.0'
+    ModuleVersion     = '1.0.1'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = '1.0.0 - Complete original vision for xProgress. Added Set-xProgress interval adjustment (-CalculatedProgressInterval, -ExplicitProgressInterval) to dynamically change progress update frequency on a running instance. Added stopwatch lifecycle functions: Start-xProgress, Suspend-xProgress, Resume-xProgress. Added Write-xProgress -DoNotStartTimer switch for manual timer control. Added module help (Get-Help about_xProgress).'
+            ReleaseNotes = '1.0.1 - Bug fix: New-xProgress auto-assigned -Id (and any child ParentID via -xParentIdentity) could come out null/0 instead of an incrementing integer, causing Write-Progress to throw. Fixed.'
 
             # Prerelease string of this module
             # Prerelease = ''

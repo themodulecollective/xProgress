@@ -144,6 +144,19 @@ Complete-xProgress -Identity $xProgressID
 
 ## Releases
 
+1.0.1 Bug Fix
+
+- `New-xProgress`: auto-assigned `-Id` (and any child's `ParentID` set via
+  `-xParentIdentity`) could come out `$null`/`0` instead of an incrementing
+  integer. The `else` branch of the ID assignment used a bare
+  `++$script:WriteProgressID` as the last statement of an if/else
+  value-capturing script block, and PowerShell's increment operator doesn't
+  emit its result in that context. `Write-Progress` would then throw
+  `Cannot validate argument on parameter 'Id'` the first time a script
+  called `Write-xProgress`/`Complete-xProgress` on an auto-assigned
+  instance. Fixed: wrapped the increment in parentheses so its value is
+  returned.
+
 1.0.0 New Functionality for managing complex timers when required by your scenario.  First major release completing the original vision for xProgress
 
 - Set-xProgress interval adjustment: Added -CalculatedProgressInterval and -ExplicitProgressInterval parameters to dynamically change the progress update frequency on an existing xProgress instance
