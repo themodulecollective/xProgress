@@ -128,7 +128,7 @@ Function New-xProgress
         Counter              = 0
         ParentID             = $ParentId
         xParentIdentity      = $xPPID
-        ID                   = if ($PSBoundParameters.ContainsKey('Id')) { $Id } else { ++$script:WriteProgressID }
+        ID                   = if ($PSBoundParameters.ContainsKey('Id')) { $Id } else { (++$script:WriteProgressID) }
         StatusType           = $StatusType
         CurrentOperationType = $CurrentOperationType
     }
