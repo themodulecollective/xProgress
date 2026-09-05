@@ -12,7 +12,7 @@ Second, a complexity problem:  managing xProgress calculations and parent / chil
 
 ## Code Conventions
 
-We use the powershell-style-practice skill to guide all PowerShell code activities.
+Always use the powershell-style-practice skill fully including all reference files.  If you don't have this skill, it is available at https://github.com/themodulecollective/PowerShell-Style-Practice.
 
 ## Commands
 
