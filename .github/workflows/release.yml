@@ -55,3 +55,13 @@ jobs:
         run: |
           $Manifest = Import-PowerShellDataFile -Path ./xProgress.psd1
           gh release create "${{ steps.version.outputs.tag }}" --title "${{ steps.version.outputs.tag }}" --notes "$($Manifest.PrivateData.PSData.ReleaseNotes)"
+      - name: Trigger Gallery publish
+        # A release created with the default GITHUB_TOKEN does not fire other workflows'
+        # `release: created` trigger (GitHub's anti-recursion safeguard), so publish.yml is
+        # invoked explicitly here instead - workflow_dispatch is exempt from that restriction.
+        if: steps.version.outputs.isNew == 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run publish.yml --ref main
