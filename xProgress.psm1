@@ -205,22 +205,22 @@ Function Set-xProgress
         [string]$CurrentOperation #Displayed in the progress bar Status field (passed through to Write-Progress -Status). This is displayed below the Activity but above the progress bar. Overrides the automatically generated xProgress CurrentOperation.
         ,
         [parameter()]
-        [switch]$AutomaticStatus
+        [switch]$AutomaticStatus #Resets a previously specified Status back to automatic generation
         ,
         [parameter()]
-        [switch]$AutomaticCurrentOperation
+        [switch]$AutomaticCurrentOperation #Resets a previously specified CurrentOperation back to automatic generation
         ,
         [parameter()]
-        [switch]$DecrementCounter
+        [switch]$DecrementCounter #Decrements the counter by one; use when a retried iteration should not advance the counter
         ,
         [parameter()]
         [alias('CalculatedInterval','CPI')]
         [ValidateSet('1Percent','10Percent','20Percent','25Percent','Each')]
-        [string]$CalculatedProgressInterval
+        [string]$CalculatedProgressInterval #Dynamically changes the progress update frequency on an already-running xProgress instance
         ,
         [parameter()]
         [alias('ExplicitInterval','EPI')]
-        [int32]$ExplicitProgressInterval
+        [int32]$ExplicitProgressInterval #Dynamically changes the progress update frequency to a fixed item count on an already-running xProgress instance
     )
 
     process
