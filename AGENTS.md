@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to coding agents when working with code in this repository.
 
 ## What This Module Does
 
@@ -12,7 +12,7 @@ Second, a complexity problem:  managing xProgress calculations and parent / chil
 
 ## Code Conventions
 
-We follow https://poshcode.gitbook.io/powershell-practice-and-style unless explicitly overridden.
+Always use the powershell-style-practice skill fully including all reference files.  If you don't have this skill, it is available at https://github.com/themodulecollective/PowerShell-Style-Practice.
 
 ## Commands
 
@@ -23,13 +23,24 @@ Invoke-ScriptAnalyzer -Path *.psm1 -Recurse
 ```
 The CI treats any **Error**-severity finding as a failure; warnings are logged but don't block. Run this before committing changes to `xProgress.psm1`.
 
+### Automated Testing
+
+- Framework: **Pester v5** (`#Requires -Modules @{ModuleName='Pester'; ModuleVersion='5.0.0'}` in every test file — a floor, not an exact pin)
+- Test files: `Tests/*.Tests.ps1`, one per exported function plus 4 meta files (`Help.Tests.ps1`, `Module.Tests.ps1`, `Pester.Tests.ps1`, `ScriptAnalyzer.Tests.ps1`)
+- Tags: `Build` (the 4 meta files), `UnitTests` (everything else — this module has no background jobs/network/filesystem I/O to integration-test)
+- Run all: `Invoke-Pester -Path ./Tests -Output Detailed`
+- Run one function's tests: `Invoke-Pester -Path ./Tests/New-xProgress.Tests.ps1 -Output Detailed`
+- Each test file independently locates and imports the manifest (`Import-Module ...\xProgress.psd1 -Force`) in its own `BeforeAll`, so files can run standalone or in any order
+- `Write-Progress`/`Write-Information` are mocked (`Mock -ModuleName xProgress Write-Progress { }`) where the test needs to assert *what* was passed to them (e.g. a non-null `-Id`); everywhere else tests assert on real return values/state
+- Module-private/script-scoped state (`$script:ProgressTracker`, `$script:WriteProgressID`) can be inspected directly via `& (Get-Module xProgress) { $script:ProgressTracker }` if a future private helper needs it — not currently used since all functions are public and `Get-xProgress` already exposes instance state
+- CI runs the suite on every push via the `test-with-pester` job in `.github/workflows/main.yml`
+
 ### Manual Testing
 
 ```powershell
 # Load the dev setup helper (environment-specific paths inside)
 . .\devScripts\setupManualTesting.ps1
 ```
-There is no Pester test suite — all testing is manual via interactive PowerShell sessions.
 
 ### Publishing (CI-managed)
 
@@ -95,7 +106,7 @@ Parent/child `Write-Progress` nesting is supported two ways:
 
 ## CI/CD
 
-- **On every push** → `.github/workflows/main.yml` runs PSScriptAnalyzer on ubuntu-latest.
+- **On every push** → `.github/workflows/main.yml` runs PSScriptAnalyzer and the Pester test suite (two jobs) on ubuntu-latest.
 - **On GitHub release or manual dispatch** → `.github/workflows/publish.yml` publishes to the PowerShell Gallery.
 
 ## Branch Conventions
