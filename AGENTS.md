@@ -14,6 +14,8 @@ Second, a complexity problem:  managing xProgress calculations and parent / chil
 
 Always use the powershell-style-practice skill fully including all reference files.  If you don't have this skill, it is available at https://github.com/themodulecollective/PowerShell-Style-Practice.
 
+**Deliberate deviation**: `xProgress.psm1` uses Allman brace style (opening brace on its own line), not the skill's prescribed One True Brace Style. This predates the skill's adoption in this repo and is being kept intentionally rather than reformatted — don't flag it as an oversight.
+
 ## Commands
 
 ### Linting (mirrors CI)

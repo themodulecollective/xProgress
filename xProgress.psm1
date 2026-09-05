@@ -1,6 +1,7 @@
 $script:ProgressTracker = @{}
 $script:WriteProgressID = 628
 
+
 Function New-xProgress
 {
     <#
@@ -11,59 +12,109 @@ Function New-xProgress
         Automatically sets up counters, timers, and incremental progress tracking.
         Can show progress only at a selected interval to improve performance (write-progress is expensive).
     .EXAMPLE
-        $xProgressID = New-xProgress -ArrayToProcess $MyListOfItems -CalculatedProgressInterval 1Percent -Activity "Process MyListOfItems"
-        Sets up xProgress to display progress for a looped operation on $MyListOfItems.  When Write-xProgress is called will update progress at each one percent increment of processing and will use -activity as the activity for Write-Progress.
+        $xParams = @{
+            ArrayToProcess             = $MyListOfItems
+            CalculatedProgressInterval = '1Percent'
+            Activity                   = 'Process MyListOfItems'
+        }
+        $xProgressID = New-xProgress @xParams
+
+        Sets up xProgress to display progress for a looped operation on $MyListOfItems. When
+        Write-xProgress is called will update progress at each one percent increment of
+        processing and will use -activity as the activity for Write-Progress.
     .EXAMPLE
-        $xProgressID = New-xProgress -ArrayToProcess $MyListOfItems -ExplicitProgressInterval 5 -Activity "Process MyListOfItems"
-        Sets up xProgress to display progress for a looped operation on $MyListOfItems.  When Write-xProgress is called will update progress once for each 5 items of processing and will use -activity as the activity for Write-Progress.
+        $xParams = @{
+            ArrayToProcess           = $MyListOfItems
+            ExplicitProgressInterval = 5
+            Activity                 = 'Process MyListOfItems'
+        }
+        $xProgressID = New-xProgress @xParams
+
+        Sets up xProgress to display progress for a looped operation on $MyListOfItems. When
+        Write-xProgress is called will update progress once for each 5 items of processing and
+        will use -activity as the activity for Write-Progress.
         Will throw an error if MyListOfItems is less than 5 items.
     .EXAMPLE
-        $ParentID = New-xProgress -ArrayToProcess @(1,2,3) -CalculatedProgressInterval Each -Activity "Multi-Stage Process"
-        $ChildID  = New-xProgress -ArrayToProcess $MyListOfItems -CalculatedProgressInterval 1Percent -Activity "Process MyListOfItems" -xParentIdentity $ParentID
-        Creates a nested parent/child pair of progress bars. The child bar is automatically indented beneath the parent in the PowerShell progress display. xProgress manages the Write-Progress ID relationship automatically.
+        $ParentParams = @{
+            ArrayToProcess             = @(1, 2, 3)
+            CalculatedProgressInterval = 'Each'
+            Activity                   = 'Multi-Stage Process'
+        }
+        $ParentID = New-xProgress @ParentParams
+
+        $ChildParams = @{
+            ArrayToProcess             = $MyListOfItems
+            CalculatedProgressInterval = '1Percent'
+            Activity                   = 'Process MyListOfItems'
+            xParentIdentity            = $ParentID
+        }
+        $ChildID = New-xProgress @ChildParams
+
+        Creates a nested parent/child pair of progress bars. The child bar is automatically
+        indented beneath the parent in the PowerShell progress display. xProgress manages the
+        Write-Progress ID relationship automatically.
     #>
 
 
     [cmdletbinding(DefaultParameterSetName = 'CI-MPC')]
+    [OutputType([string])]
     param(
-        [parameter(Mandatory)]
+        [parameter(Mandatory, HelpMessage = 'The array of items this progress instance will track')]
         [psobject[]]$ArrayToProcess #The array of items to be processed
         ,
         [parameter(ParameterSetName = 'CI-MPC')]
         [parameter(ParameterSetName = 'CI-xPC')]
         [alias('CalculatedInterval','CPI')]
         [ValidateSet('1Percent','10Percent','20Percent','25Percent','Each')]
-        [string]$CalculatedProgressInterval = '1Percent' #Select a progress interval.  Default is 1 Percent (1Percent).
+        # Select a progress interval. Default is 1 Percent (1Percent).
+        [string]$CalculatedProgressInterval = '1Percent'
         ,
         [parameter(ParameterSetName = 'EI-MPC')]
         [parameter(ParameterSetName = 'EI-xPC')]
         [alias('ExplicitInterval','EPI')]
-        [int32]$ExplicitProgressInterval #specify an explicity item count at which to show progress.
+        # Specify an explicit item count at which to show progress.
+        [int32]$ExplicitProgressInterval
         ,
-        [parameter(Mandatory)]
-        [string]$Activity #Displayed in the progress bar Activity field (passed through to Write-Progress -Activity). This is the main title of the progress bar.
+        [parameter(Mandatory, HelpMessage = 'The main title to display for this progress bar')]
+        # Displayed in the progress bar Activity field (passed through to Write-Progress -Activity).
+        # This is the main title of the progress bar.
+        [string]$Activity
         ,
         [parameter()]
-        [string]$Status #Displayed in the progress bar Status field (passed through to Write-Progress -Status). This is displayed below the Activity but above the progress bar. Overrides the automatically generated xProgress status which is NULL unless Parent/Child xProgress instances are configured.
+        # Displayed in the progress bar Status field (passed through to Write-Progress -Status).
+        # This is displayed below the Activity but above the progress bar. Overrides the
+        # automatically generated xProgress status, which is NULL unless Parent/Child xProgress
+        # instances are configured.
+        [string]$Status
         ,
         # Displayed in the progress bar Status field (passed through to Write-Progress -Status).
         # This is displayed below the Activity but above the progress bar.
         # Overrides the automatically generated xProgress CurrentOperation.
-        # Automatically generated Current Operation shows "Processing [CurrentFirstItemCount] through [CurrentBatchCount] of [TotalItemsCount]"
+        # Automatically generated Current Operation shows "Processing [CurrentFirstItemCount]
+        # through [CurrentBatchCount] of [TotalItemsCount]"
         [parameter()]
         [string]$CurrentOperation
         ,
         [parameter()]
-        [int32]$Id #Manually set the Id for Write-Progress, if desired.  Otherwise xProgress will automatically set the ID to an incrementing value.
+        # Manually set the Id for Write-Progress, if desired. Otherwise xProgress will
+        # automatically set the ID to an incrementing value.
+        [int32]$Id
         ,
-        [parameter(Mandatory,ParameterSetName = 'CI-xPC')]
-        [parameter(Mandatory,ParameterSetName = 'EI-xPC')]
+        [parameter(Mandatory,ParameterSetName = 'CI-xPC',
+            HelpMessage = 'The Identity of the parent xProgress instance this new instance nests under')]
+        [parameter(Mandatory,ParameterSetName = 'EI-xPC',
+            HelpMessage = 'The Identity of the parent xProgress instance this new instance nests under')]
         [alias('xPPID')]
-        [guid]$xParentIdentity #Set another xProgress Instance as the parent of this new xProgress instance for progress bar nesting
+        # Set another xProgress Instance as the parent of this new xProgress instance for
+        # progress bar nesting
+        [guid]$xParentIdentity
         ,
         [parameter(ParameterSetName = 'CI-MPC')]
         [parameter(ParameterSetName = 'EI-MPC')]
-        [int32]$ParentId #Manually set the ParentId for Write-Progress, if desired. Otherwise xProgress will automatically set the ParentID to -1 (no parent) unless you are using the -xParent parameter for xProgress managed ParentIDs.
+        # Manually set the ParentId for Write-Progress, if desired. Otherwise xProgress will
+        # automatically set the ParentID to -1 (no parent) unless you are using the -xParent
+        # parameter for xProgress managed ParentIDs.
+        [int32]$ParentId
     )
 
     $ProgressGuid = $(New-Guid).guid
@@ -73,26 +124,21 @@ Function New-xProgress
     {
         'CI-*'
         {
-            $divisor = switch ($CalculatedProgressInterval)
-            {
-                '1Percent'
-                {100}
-                '10Percent'
-                {10}
-                '20Percent'
-                {5}
-                '25Percent'
-                {4}
-                'Each'
-                {$total}
-            }
-            $Interval = [math]::Ceiling($total / $divisor)
+            $Interval = Get-xProgressInterval -CalculatedProgressInterval $CalculatedProgressInterval -Total $total
         }
         'EI-*'
         {
             if ($ExplicitProgressInterval -gt $total)
             {
-                throw ("ExplicitProgressInterval $ExplicitProgressInterval is greater than the provided ArrayToProcess total count: $total")
+                $message = "ExplicitProgressInterval $ExplicitProgressInterval exceeds total count $total"
+                $PSCmdlet.ThrowTerminatingError(
+                    [System.Management.Automation.ErrorRecord]::new(
+                        [System.ArgumentException]::new($message),
+                        'ExplicitProgressIntervalExceedsTotal',
+                        [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                        $ExplicitProgressInterval
+                    )
+                )
             }
             else
             {
@@ -114,10 +160,19 @@ Function New-xProgress
         }
     }
 
-    $StatusType = switch ($PSBoundParameters.ContainsKey('Status')) {$true {'Specified'} $false {'Automatic'}}
-    $CurrentOperationType = switch ($PSBoundParameters.ContainsKey('CurrentOperation')) {$true {'Specified'} $false {'Automatic'}}
+    $StatusType = switch ($PSBoundParameters.ContainsKey('Status'))
+    {
+        $true {'Specified'}
+        $false {'Automatic'}
+    }
+    $CurrentOperationType = switch ($PSBoundParameters.ContainsKey('CurrentOperation'))
+    {
+        $true {'Specified'}
+        $false {'Automatic'}
+    }
 
     $xPi = [pscustomobject]@{
+        PSTypeName           = 'xProgress.Instance'
         Identity             = $ProgressGUID
         Activity             = $Activity
         Status               = $Status
@@ -128,7 +183,14 @@ Function New-xProgress
         Counter              = 0
         ParentID             = $ParentId
         xParentIdentity      = $xPPID
-        ID                   = if ($PSBoundParameters.ContainsKey('Id')) { $Id } else { (++$script:WriteProgressID) }
+        ID                   = if ($PSBoundParameters.ContainsKey('Id'))
+        {
+            $Id
+        }
+        else
+        {
+            (++$script:WriteProgressID)
+        }
         StatusType           = $StatusType
         CurrentOperationType = $CurrentOperationType
     }
@@ -138,18 +200,21 @@ Function New-xProgress
     $xPi.Identity
 }
 
+
 Function Get-xProgress
 {
     <#
     .SYNOPSIS
         Gets an xProgress instance based on the provided Identity or gets all current xProgress instances
     .DESCRIPTION
-        Gets an xProgress configuration instance or all current xProgress configuration instances.  Instances would have been created by a previous New-xProgress.
+        Gets an xProgress configuration instance or all current xProgress configuration instances.
+        Instances would have been created by a previous New-xProgress.
     .EXAMPLE
         Get-xProgress -Identity $xProgressID
         Returns the identified xProgress configuration instance if it exists
     #>
     [cmdletbinding()]
+    [OutputType('xProgress.Instance')]
     param(
         [parameter(ValueFromPipeline,ValueFromPipelineByPropertyName)]
         [guid[]]$Identity #GUID or GUID string provided from a previously run New-xProgress
@@ -170,15 +235,17 @@ Function Get-xProgress
     }
 }
 
+
 Function Get-xProgressTrackedInstance
 {
     <#
     .SYNOPSIS
-        Internal helper (not exported). Returns the tracked xProgress instance for a GUID, or $null with a warning if it isn't tracked.
+        Internal helper (not exported). Returns the tracked xProgress instance for a GUID, or $null
+        with a warning if it isn't tracked.
     #>
     [cmdletbinding()]
     param(
-        [parameter(Mandatory)]
+        [parameter(Mandatory, HelpMessage = 'String form of the xProgress Identity GUID to look up')]
         [string]$ProgressGUID #string form of the xProgress Identity GUID to look up
     )
     if ($script:ProgressTracker.ContainsKey($ProgressGUID))
@@ -191,57 +258,106 @@ Function Get-xProgressTrackedInstance
     }
 }
 
+
+Function Get-xProgressInterval
+{
+    <#
+    .SYNOPSIS
+        Internal helper (not exported). Resolves a CalculatedProgressInterval preset name and a
+        total item count to a ProgressInterval integer.
+    #>
+    [cmdletbinding()]
+    param(
+        [parameter(Mandatory, HelpMessage = 'The named interval preset to resolve')]
+        [ValidateSet('1Percent','10Percent','20Percent','25Percent','Each')]
+        [string]$CalculatedProgressInterval #the named interval preset to resolve
+        ,
+        [parameter(Mandatory, HelpMessage = 'Total item count for the progress instance')]
+        [int]$Total #total item count; used as the divisor for 'Each' and in the final Ceiling calculation
+    )
+    $divisor = switch ($CalculatedProgressInterval)
+    {
+        '1Percent'  {100}
+        '10Percent' {10}
+        '20Percent' {5}
+        '25Percent' {4}
+        'Each'      {$Total}
+    }
+    [math]::Ceiling($Total / $divisor)
+}
+
+
 Function Set-xProgress
 {
     <#
     .SYNOPSIS
         Sets an xProgress instance based on the provided Identity(ies)
     .DESCRIPTION
-        Sets an xProgress configuration instance or all specified xProgress instances.  Instances would have been created by a previous New-xProgress.
+        Sets an xProgress configuration instance or all specified xProgress instances. Instances
+        would have been created by a previous New-xProgress.
     .EXAMPLE
         Set-xProgress -Identity $xProgressID -Status 'Final Phase'
         Sets the identified xProgress instance Status to the specified value 'Final Phase'
     .EXAMPLE
         Set-xProgress -Identity $xProgressID -AutomaticStatus
-        Resets a previously specified Status back to automatic generation. Use after a stage-specific status is no longer relevant.
+        Resets a previously specified Status back to automatic generation. Use after a
+        stage-specific status is no longer relevant.
     .EXAMPLE
         Set-xProgress -Identity $xProgressID -CalculatedProgressInterval 10Percent
-        Dynamically changes the progress update frequency to every 10% on an already-running instance. Useful when processing speed changes significantly mid-loop and you want to adjust update frequency without restarting.
+        Dynamically changes the progress update frequency to every 10% on an already-running
+        instance. Useful when processing speed changes significantly mid-loop and you want to
+        adjust update frequency without restarting.
     .EXAMPLE
         Set-xProgress -Identity $xProgressID -DecrementCounter
-        Decrements the counter by one. Useful when an iteration is retried and the counter should not advance for that item.
+        Decrements the counter by one. Useful when an iteration is retried and the counter should
+        not advance for that item.
     #>
     [cmdletbinding()]
     param(
-        [parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName)]
+        [parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName,
+            HelpMessage = 'GUID or GUID string of the xProgress instance to update')]
         [guid[]]$Identity #GUID or GUID string provided from a previously run New-xProgress
         ,
         [parameter()]
-        [string]$Activity #Displayed in the progress bar Activity field (passed through to Write-Progress -Activity). This is the main title of the progress bar.
+        # Displayed in the progress bar Activity field (passed through to Write-Progress
+        # -Activity). This is the main title of the progress bar.
+        [string]$Activity
         ,
         [parameter()]
-        [string]$Status #Displayed in the progress bar Status field (passed through to Write-Progress -Status). This is displayed below the Activity but above the progress bar. Overrides the automatically generated xProgress status which is NULL unless Parent/Child xProgress instances are configured.
+        # Displayed in the progress bar Status field (passed through to Write-Progress -Status).
+        # This is displayed below the Activity but above the progress bar. Overrides the
+        # automatically generated xProgress status, which is NULL unless Parent/Child xProgress
+        # instances are configured.
+        [string]$Status
         ,
         [parameter()]
-        [string]$CurrentOperation #Displayed in the progress bar Status field (passed through to Write-Progress -Status). This is displayed below the Activity but above the progress bar. Overrides the automatically generated xProgress CurrentOperation.
+        # Displayed in the progress bar Status field (passed through to Write-Progress -Status).
+        # This is displayed below the Activity but above the progress bar. Overrides the
+        # automatically generated xProgress CurrentOperation.
+        [string]$CurrentOperation
         ,
         [parameter()]
         [switch]$AutomaticStatus #Resets a previously specified Status back to automatic generation
         ,
         [parameter()]
-        [switch]$AutomaticCurrentOperation #Resets a previously specified CurrentOperation back to automatic generation
+        # Resets a previously specified CurrentOperation back to automatic generation
+        [switch]$AutomaticCurrentOperation
         ,
         [parameter()]
-        [switch]$DecrementCounter #Decrements the counter by one; use when a retried iteration should not advance the counter
+        # Decrements the counter by one; use when a retried iteration should not advance the counter
+        [switch]$DecrementCounter
         ,
         [parameter()]
         [alias('CalculatedInterval','CPI')]
         [ValidateSet('1Percent','10Percent','20Percent','25Percent','Each')]
-        [string]$CalculatedProgressInterval #Dynamically changes the progress update frequency on an already-running xProgress instance
+        # Dynamically changes the progress update frequency on an already-running xProgress instance
+        [string]$CalculatedProgressInterval
         ,
         [parameter()]
         [alias('ExplicitInterval','EPI')]
-        [int32]$ExplicitProgressInterval #Dynamically changes the progress update frequency to a fixed item count on an already-running xProgress instance
+        # Dynamically changes the progress update frequency to a fixed item count on an
+        # already-running xProgress instance
+        [int32]$ExplicitProgressInterval
     )
 
     process
@@ -289,28 +405,27 @@ Function Set-xProgress
                         }
                         else
                         {
-                            Write-Warning -Message "Counter for xProgress Instance $($xPi.Identity) is already at $($xPi.Counter); decrement skipped"
+                            $message = "Counter for $($xPi.Identity) already at $($xPi.Counter); decrement skipped"
+                            Write-Warning -Message $message
                         }
                     }
                 }
                 'CalculatedProgressInterval'
                 {
-                    $total = $xPi.Total
-                    $divisor = switch ($CalculatedProgressInterval)
-                    {
-                        '1Percent'  {100}
-                        '10Percent' {10}
-                        '20Percent' {5}
-                        '25Percent' {4}
-                        'Each'      {$total}
+                    $intervalParams = @{
+                        CalculatedProgressInterval = $CalculatedProgressInterval
+                        Total                      = $xPi.Total
                     }
-                    $xPi.ProgressInterval = [math]::Ceiling($total / $divisor)
+                    $xPi.ProgressInterval = Get-xProgressInterval @intervalParams
                 }
                 'ExplicitProgressInterval'
                 {
                     if ($ExplicitProgressInterval -gt $xPi.Total)
                     {
-                        Write-Warning -Message "ExplicitProgressInterval $ExplicitProgressInterval is greater than total count $($xPi.Total); interval not changed"
+                        $total = $xPi.Total
+                        $message = "ExplicitProgressInterval $ExplicitProgressInterval exceeds total $total;" +
+                            ' not changed'
+                        Write-Warning -Message $message
                     }
                     else
                     {
@@ -322,36 +437,51 @@ Function Set-xProgress
     }
 }
 
+
 Function Write-xProgress
 {
     <#
     .SYNOPSIS
-        Writes powershell progress output using Write-Progress based on an instance of xProgress created using New-xProgress
+        Writes powershell progress output using Write-Progress based on an instance of xProgress
+        created using New-xProgress
     .DESCRIPTION
-        Writes powershell progress output using Write-Progress based on a previous New-xProgress identity.  If the Progress instance timer is not started, this also starts the timer for the first item in the counter.
+        Writes powershell progress output using Write-Progress based on a previous New-xProgress
+        identity. If the Progress instance timer is not started, this also starts the timer for
+        the first item in the counter.
     .EXAMPLE
         Write-xProgress -Identity $xProgressID
-        calls Write-Progress with previously defined activity and automatically generated counter, progress, and seconds remaining
+        calls Write-Progress with previously defined activity and automatically generated
+        counter, progress, and seconds remaining
     .EXAMPLE
         Write-xProgress -Identity $xProgressID
         Set-xProgress -Identity $xProgressID -CurrentOperation 'Cleanup'
         Write-xProgress -Identity $xProgressID -DoNotIncrement
-        Updates the progress display mid-item (e.g. to show a phase change) without advancing the counter. The first Write-xProgress increments and shows initial progress; the second refreshes the display with the new CurrentOperation but does not count the item twice.
+        Updates the progress display mid-item (e.g. to show a phase change) without advancing the
+        counter. The first Write-xProgress increments and shows initial progress; the second
+        refreshes the display with the new CurrentOperation but does not count the item twice.
     .EXAMPLE
         Start-xProgress -Identity $xProgressID
         Write-xProgress -Identity $xProgressID -DoNotStartTimer
-        Use -DoNotStartTimer when you have already started the stopwatch manually via Start-xProgress. Prevents Write-xProgress from attempting to start a timer that is already running.
+        Use -DoNotStartTimer when you have already started the stopwatch manually via
+        Start-xProgress. Prevents Write-xProgress from attempting to start a timer that is
+        already running.
     #>
 
     [cmdletbinding()]
     param(
-        [parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName)]
+        [parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName,
+            HelpMessage = 'GUID or GUID string of the xProgress instance to write progress for')]
         [guid[]]$Identity #GUID or GUID string provided from a previously run New-xProgress
         ,
         [parameter()]
-        [switch]$DoNotIncrement #Do not increment the progress counter - for situations where you call Write-xProgress more than once during the processing of an item, for example, to update status or activity, but do not want to increment the counter.
+        # Do not increment the progress counter - for situations where you call Write-xProgress
+        # more than once during the processing of an item, for example, to update status or
+        # activity, but do not want to increment the counter.
+        [switch]$DoNotIncrement
         ,
-        [parameter()] #use in a case where you are writing progress but don't want to do the initial start of the timer for the progress instance
+        # Use in a case where you are writing progress but don't want to do the initial start of
+        # the timer for the progress instance
+        [parameter()]
         [switch]$DoNotStartTimer
     )
 
@@ -368,7 +498,15 @@ Function Write-xProgress
                 }
                 $false
                 {
-                    throw("No xProgress Instance found for identity $ProgressGUID")
+                    $message = "No xProgress Instance found for identity $ProgressGUID"
+                    $PSCmdlet.ThrowTerminatingError(
+                        [System.Management.Automation.ErrorRecord]::new(
+                            [System.Management.Automation.ItemNotFoundException]::new($message),
+                            'xProgressInstanceNotFound',
+                            [System.Management.Automation.ErrorCategory]::ObjectNotFound,
+                            $ProgressGUID
+                        )
+                    )
                 }
             }
             switch ($DoNotIncrement)
@@ -390,15 +528,19 @@ Function Write-xProgress
             {
                 # modulus check passed so write-progress this time
                 $elapsedSeconds = [math]::Ceiling($xPi.Stopwatch.elapsed.TotalSeconds)
-                $secondsPerItem = [math]::Ceiling($elapsedSeconds/$counter)
+                $secondsPerItem = [math]::Ceiling($elapsedSeconds / $counter)
                 $secondsRemaining = $($xPi.total - $counter) * $secondsPerItem
                 $progressItem = [Math]::Min($counter + $progressInterval - 1, $xPi.total)
-                $CurrentOperation = switch ($xPi.CurrentOperationType) {'Automatic' {"Processing $counter through $progressItem of $($xPi.total)"} 'Specified' {$xPi.CurrentOperation} }
+                $CurrentOperation = switch ($xPi.CurrentOperationType)
+                {
+                    'Automatic' {"Processing $counter through $progressItem of $($xPi.total)"}
+                    'Specified' {$xPi.CurrentOperation}
+                }
                 $wpParams = @{
                     Activity         = $xPi.Activity
                     CurrentOperation = $CurrentOperation
                     PercentComplete  =
-                        switch ($counter/$xPi.total * 100)
+                        switch ($counter / $xPi.total * 100)
                         {
                             {$_ -gt 100}
                             {
@@ -429,6 +571,7 @@ Function Write-xProgress
     }
 }
 
+
 Function Complete-xProgress
 {
     <#
@@ -446,7 +589,8 @@ Function Complete-xProgress
 
     [cmdletbinding()]
     param(
-        [parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName)]
+        [parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName,
+            HelpMessage = 'GUID or GUID string of the xProgress instance to complete')]
         [guid[]]$Identity #the xProgress Identity to complete
     )
 
@@ -469,12 +613,14 @@ Function Complete-xProgress
             #Remove progress bar
             Write-Progress @wpParams -Completed
             Write-Information -MessageData "Completing xProgress Instance: $ProgressGUID"
-            Write-Information -MessageData $($xPi | Select-Object -Property *,@{n = 'ElapsedSeconds'; e = {$elapsedSeconds} } )
+            $elapsedProperty = @{n = 'ElapsedSeconds'; e = {$elapsedSeconds}}
+            Write-Information -MessageData $($xPi | Select-Object -Property *, $elapsedProperty)
             #Remove Progress Identity GUID
             $script:ProgressTracker.remove($ProgressGUID)
         }
     }
 }
+
 
 Function Start-xProgress
 {
@@ -490,15 +636,24 @@ Function Start-xProgress
         Start-xProgress -Identity $xProgressID
         Starts the stopwatch for the identified xProgress instance
     .EXAMPLE
-        $xProgressID = New-xProgress -ArrayToProcess $MyListOfItems -CalculatedProgressInterval 1Percent -Activity "Process MyListOfItems"
+        $xParams = @{
+            ArrayToProcess             = $MyListOfItems
+            CalculatedProgressInterval = '1Percent'
+            Activity                   = 'Process MyListOfItems'
+        }
+        $xProgressID = New-xProgress @xParams
         Start-xProgress -Identity $xProgressID
         foreach ($i in $MyListOfItems) { Write-xProgress -Identity $xProgressID -DoNotStartTimer }
         Complete-xProgress -Identity $xProgressID
-        Starts the timer before the loop so that any pre-loop setup time is excluded from elapsed calculations. -DoNotStartTimer prevents Write-xProgress from re-starting the already-running stopwatch.
+
+        Starts the timer before the loop so that any pre-loop setup time is excluded from
+        elapsed calculations. -DoNotStartTimer prevents Write-xProgress from re-starting the
+        already-running stopwatch.
     #>
     [cmdletbinding()]
     param(
-        [parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName)]
+        [parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName,
+            HelpMessage = 'GUID or GUID string of the xProgress instance to start timing')]
         [guid[]]$Identity #GUID or GUID string provided from a previously run New-xProgress
     )
 
@@ -521,6 +676,7 @@ Function Start-xProgress
     }
 }
 
+
 Function Suspend-xProgress
 {
     <#
@@ -541,7 +697,8 @@ Function Suspend-xProgress
     #>
     [cmdletbinding()]
     param(
-        [parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName)]
+        [parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName,
+            HelpMessage = 'GUID or GUID string of the xProgress instance to suspend timing for')]
         [guid[]]$Identity #GUID or GUID string provided from a previously run New-xProgress
     )
 
@@ -564,6 +721,7 @@ Function Suspend-xProgress
     }
 }
 
+
 Function Resume-xProgress
 {
     <#
@@ -580,11 +738,13 @@ Function Resume-xProgress
         Invoke-SlowExternalOperation
         Resume-xProgress -Identity $xProgressID
         Write-xProgress -Identity $xProgressID -DoNotIncrement
-        Resumes timing after an external operation and refreshes the progress display without advancing the counter.
+        Resumes timing after an external operation and refreshes the progress display without
+        advancing the counter.
     #>
     [cmdletbinding()]
     param(
-        [parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName)]
+        [parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName,
+            HelpMessage = 'GUID or GUID string of the xProgress instance to resume timing for')]
         [guid[]]$Identity #GUID or GUID string provided from a previously run New-xProgress
     )
 
