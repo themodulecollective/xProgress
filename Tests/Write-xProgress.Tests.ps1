@@ -3,8 +3,8 @@
 $CommandName = $MyInvocation.MyCommand.Name.Replace('.Tests.ps1', '')
 
 BeforeAll {
-    $moduleRoot = Split-Path -Path $PSScriptRoot -Parent
-    Import-Module -Name (Join-Path -Path $moduleRoot -ChildPath 'xProgress.psd1') -Force
+    . "$PSScriptRoot/ModuleUnderTest.ps1"
+    Import-Module -Name $manifestPath -Force
 }
 
 Describe "$CommandName Unit Tests" -Tag 'UnitTests' {

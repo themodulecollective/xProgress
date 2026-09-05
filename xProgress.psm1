@@ -158,7 +158,7 @@ Function Get-xProgress
     {
         if (-not $MyInvocation.ExpectingInput -and $Identity.count -eq 0)
         {
-            $script:ProgressTracker.keys.foreach({$script:ProgressTracker.$_})
+            $script:ProgressTracker.Values
         }
     }
     process
@@ -167,6 +167,27 @@ Function Get-xProgress
         {
             $script:ProgressTracker.$($i.Guid)
         }
+    }
+}
+
+Function Get-xProgressTrackedInstance
+{
+    <#
+    .SYNOPSIS
+        Internal helper (not exported). Returns the tracked xProgress instance for a GUID, or $null with a warning if it isn't tracked.
+    #>
+    [cmdletbinding()]
+    param(
+        [parameter(Mandatory)]
+        [string]$ProgressGUID #string form of the xProgress Identity GUID to look up
+    )
+    if ($script:ProgressTracker.ContainsKey($ProgressGUID))
+    {
+        $script:ProgressTracker.$($ProgressGUID)
+    }
+    else
+    {
+        Write-Warning -Message "No xProgress Instance found for identity $ProgressGUID"
     }
 }
 
@@ -434,33 +455,23 @@ Function Complete-xProgress
         foreach ($i in $Identity)
         {
             $ProgressGUID = $i.guid #set the ProgressGUID to the string represenation of the Identity GUID
-            switch ($Script:ProgressTracker.containsKey($ProgressGUID))
-            {
-                $true
-                {
-                    $xPi = $script:ProgressTracker.$($ProgressGUID)
-                    $xPi.Stopwatch.Stop() #stop the stopwatch
-                    $elapsedSeconds = [math]::Ceiling($xPi.Stopwatch.elapsed.TotalSeconds)
-                    $wpParams = @{
-                        Activity         = $xPi.Activity
-                        PercentComplete  = 100
-                        SecondsRemaining = 0
-                        Id               = $xPi.Id
-                        ParentID         = $xPi.ParentId
-                    }
-                    #Remove progress bar
-                    Write-Progress @wpParams -Completed
-                    Write-Information -MessageData "Completing xProgress Instance: $ProgressGUID"
-                    Write-Information -MessageData $($xPi | Select-Object -Property *,@{n = 'ElapsedSeconds'; e = {$elapsedSeconds} } )
-                    #Remove Progress Identity GUID
-                    $script:ProgressTracker.remove($ProgressGUID)
-
-                }
-                $false
-                {
-                    Write-Warning -Message "No xProgress Instance found for identity $ProgressGUID"
-                }
+            $xPi = Get-xProgressTrackedInstance -ProgressGUID $ProgressGUID
+            if ($null -eq $xPi) { continue }
+            $xPi.Stopwatch.Stop() #stop the stopwatch
+            $elapsedSeconds = [math]::Ceiling($xPi.Stopwatch.elapsed.TotalSeconds)
+            $wpParams = @{
+                Activity         = $xPi.Activity
+                PercentComplete  = 100
+                SecondsRemaining = 0
+                Id               = $xPi.Id
+                ParentID         = $xPi.ParentId
             }
+            #Remove progress bar
+            Write-Progress @wpParams -Completed
+            Write-Information -MessageData "Completing xProgress Instance: $ProgressGUID"
+            Write-Information -MessageData $($xPi | Select-Object -Property *,@{n = 'ElapsedSeconds'; e = {$elapsedSeconds} } )
+            #Remove Progress Identity GUID
+            $script:ProgressTracker.remove($ProgressGUID)
         }
     }
 }
@@ -496,24 +507,15 @@ Function Start-xProgress
         foreach ($i in $Identity)
         {
             $ProgressGUID = $i.guid
-            switch ($Script:ProgressTracker.containsKey($ProgressGUID))
+            $xPi = Get-xProgressTrackedInstance -ProgressGUID $ProgressGUID
+            if ($null -eq $xPi) { continue }
+            if ($xPi.Stopwatch.IsRunning)
             {
-                $true
-                {
-                    $xPi = $script:ProgressTracker.$($ProgressGUID)
-                    if ($xPi.Stopwatch.IsRunning)
-                    {
-                        Write-Warning -Message "Stopwatch for xProgress Instance $ProgressGUID is already running"
-                    }
-                    else
-                    {
-                        $xPi.Stopwatch.Start()
-                    }
-                }
-                $false
-                {
-                    Write-Warning -Message "No xProgress Instance found for identity $ProgressGUID"
-                }
+                Write-Warning -Message "Stopwatch for xProgress Instance $ProgressGUID is already running"
+            }
+            else
+            {
+                $xPi.Stopwatch.Start()
             }
         }
     }
@@ -548,24 +550,15 @@ Function Suspend-xProgress
         foreach ($i in $Identity)
         {
             $ProgressGUID = $i.guid
-            switch ($Script:ProgressTracker.containsKey($ProgressGUID))
+            $xPi = Get-xProgressTrackedInstance -ProgressGUID $ProgressGUID
+            if ($null -eq $xPi) { continue }
+            if ($xPi.Stopwatch.IsRunning)
             {
-                $true
-                {
-                    $xPi = $script:ProgressTracker.$($ProgressGUID)
-                    if ($xPi.Stopwatch.IsRunning)
-                    {
-                        $xPi.Stopwatch.Stop()
-                    }
-                    else
-                    {
-                        Write-Warning -Message "Stopwatch for xProgress Instance $ProgressGUID is not running"
-                    }
-                }
-                $false
-                {
-                    Write-Warning -Message "No xProgress Instance found for identity $ProgressGUID"
-                }
+                $xPi.Stopwatch.Stop()
+            }
+            else
+            {
+                Write-Warning -Message "Stopwatch for xProgress Instance $ProgressGUID is not running"
             }
         }
     }
@@ -597,29 +590,8 @@ Function Resume-xProgress
 
     process
     {
-        foreach ($i in $Identity)
-        {
-            $ProgressGUID = $i.guid
-            switch ($Script:ProgressTracker.containsKey($ProgressGUID))
-            {
-                $true
-                {
-                    $xPi = $script:ProgressTracker.$($ProgressGUID)
-                    if ($xPi.Stopwatch.IsRunning)
-                    {
-                        Write-Warning -Message "Stopwatch for xProgress Instance $ProgressGUID is already running"
-                    }
-                    else
-                    {
-                        $xPi.Stopwatch.Start()
-                    }
-                }
-                $false
-                {
-                    Write-Warning -Message "No xProgress Instance found for identity $ProgressGUID"
-                }
-            }
-        }
+        # Resuming is identical to starting - both start a stopped stopwatch and warn otherwise.
+        Start-xProgress -Identity $Identity
     }
 }
 
