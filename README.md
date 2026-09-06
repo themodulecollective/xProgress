@@ -8,17 +8,17 @@ xProgress solves all three problems.
 
 ## Performance
 
-    xProgress throttles Write-Progress calls to configurable intervals (e.g. every 1%, every 10 items) while still calculating accurate percentage complete and estimated time remaining for every item processed.
+xProgress throttles Write-Progress calls to configurable intervals (e.g. every 1%, every 10 items) while still calculating accurate percentage complete and estimated time remaining for every item processed.
 
 ## Complexity
 
-    Managing progress bar calculations, parent/child relationships, and timer state is handled automatically by xProgress so you do not need to write custom tracking code for each scenario where progress output is desired.
+Managing progress bar calculations, parent/child relationships, and timer state is handled automatically by xProgress so you do not need to write custom tracking code for each scenario where progress output is desired.
 
-    A hand-rolled equivalent typically means: a counter and a modulus check to throttle calls, a stopwatch plus elapsed/remaining-time math, percent-complete capping so a rounding error never reports 101%, and — the moment a second progress bar nests under the first — a hand-maintained scheme for Id/ParentId bookkeeping. Roughly 40-80 lines of that plumbing per progress bar, copy-pasted and re-adapted at every callsite, versus one `New-xProgress` line plus a `Write-xProgress` call per iteration. It's also easy to get subtly wrong: a percent-complete that could exceed 100, a divide-by-zero on the first call, an auto-assigned Id that silently came out `$null`, an off-by-one in a batch-count message.  All bugs you no longer have to worry about.
+A hand-rolled equivalent typically means: a counter and a modulus check to throttle calls, a stopwatch plus elapsed/remaining-time math, percent-complete capping so a rounding error never reports 101%, and — the moment a second progress bar nests under the first — a hand-maintained scheme for Id/ParentId bookkeeping. Roughly 40-80 lines of that plumbing per progress bar, copy-pasted and re-adapted at every callsite, versus one `New-xProgress` line plus a `Write-xProgress` call per iteration. It's also easy to get subtly wrong: a percent-complete that could exceed 100, a divide-by-zero on the first call, an auto-assigned Id that silently came out `$null`, an off-by-one in a batch-count message.  All bugs you no longer have to worry about.
 
 ## Background Jobs
 
-    Write-Progress calls inside a `Start-Job` scriptblock only reach that job's own Progress stream — they are invisible in the calling session without tooling like xProgress. As far as we're aware, no other PowerShell module does this for you. Getting it right by hand (tracking each activity separately instead of just the last message received, preserving parent/child nesting reported inside the job, avoiding Id collisions across concurrent jobs, cleaning up once a job finishes) easily runs past 100 lines. This why most scripts and modules either skip job progress entirely or settle for a naive "show whatever came in last" readout. `Write-xJobProgress` reduces all of that to one cmdlet call in your own polling loop.
+Write-Progress calls inside a `Start-Job` scriptblock only reach that job's own Progress stream — they are invisible in the calling session without tooling like xProgress. As far as we're aware, no other PowerShell module does this for you. Getting it right by hand (tracking each activity separately instead of just the last message received, preserving parent/child nesting reported inside the job, avoiding Id collisions across concurrent jobs, cleaning up once a job finishes) easily runs past 100 lines. This why most scripts and modules either skip job progress entirely or settle for a naive "show whatever came in last" readout. `Write-xJobProgress` reduces all of that to one cmdlet call in your own polling loop.
 
 ```Powershell
 New-xProgress
