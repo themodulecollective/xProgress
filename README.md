@@ -20,6 +20,7 @@ Complete-xProgress
 Start-xProgress
 Suspend-xProgress
 Resume-xProgress
+Write-xJobProgress
 ```
 
 ## Examples
@@ -142,7 +143,41 @@ foreach ($i in $MyListOfItems)
 Complete-xProgress -Identity $xProgressID
 ```
 
+### Job Progress
+
+`Write-xJobProgress` mirrors `Write-Progress` calls happening *inside* a background job's scriptblock into your own session. It's a lightweight, write-only passthrough — unlike the rest of xProgress, it does not register anything in xProgress's own tracker and has no throttling, Suspend/Resume, or timer semantics. Call it repeatedly from your own polling loop; it never blocks or polls on its own.
+
+```powershell
+$job = Start-Job -ScriptBlock {
+    1..10 | ForEach-Object {
+        Write-Progress -Activity 'Work' -PercentComplete ($_ * 10)
+        Start-Sleep -Milliseconds 200
+    }
+}
+
+while ($job.State -eq 'Running')
+{
+    Write-xJobProgress -Job $job
+    Start-Sleep -Milliseconds 250
+}
+Write-xJobProgress -Job $job
+# the final call shows the last update and completes/clears the progress bar
+
+# Or, for every job in the session:
+Get-Job | Write-xJobProgress
+```
+
+If the job's scriptblock reports more than one activity (including nested activities via `-ParentId`), `Write-xJobProgress` mirrors each one with a distinct, stable progress bar and preserves the parent/child nesting. Progress `-Id` values are drawn from the same pool xProgress itself uses, so mirrored job bars never collide with your own xProgress instances.
+
 ## Releases
+
+1.1.0 New Functionality
+
+- `Write-xJobProgress`: mirrors `Write-Progress` calls happening inside a
+  background job's scriptblock into the caller's session, one bar per
+  distinct activity, preserving parent/child nesting reported inside the
+  job. Lightweight write-only passthrough - no throttling/timer/tracker
+  integration (see the Job Progress section above).
 
 1.0.1 Bug Fix
 
@@ -197,5 +232,5 @@ Complete-xProgress -Identity $xProgressID
 
 ## Development Plans
 
-- add/extend functions for Job Progress display
+- `Write-xJobProgress`: add an `-xParentIdentity` parameter to nest mirrored job progress bars under a caller's own xProgress instance
 - possibly incorporate some gui progress bars like this: https://key2consulting.com/powershell-how-to-display-job-progress/ or https://github.com/Tiberriver256/PoshProgressBar

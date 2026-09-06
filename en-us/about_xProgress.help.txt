@@ -108,6 +108,12 @@ FUNCTIONS
     Resume-xProgress
         Resume a paused stopwatch.
 
+    Write-xJobProgress
+        Mirror progress reported inside a background job's scriptblock
+        (via Write-Progress) into the caller's session. Lightweight,
+        write-only passthrough - does not use module state from the
+        functions above. Call repeatedly from your own polling loop.
+
     Initialize-xProgress is an alias for New-xProgress.
 
 EXAMPLES
@@ -178,6 +184,23 @@ EXAMPLES
 
         Complete-xProgress -Identity $id
 
+    Displaying progress from a background job
+
+        $job = Start-Job -ScriptBlock {
+            1..10 | ForEach-Object {
+                Write-Progress -Activity 'Work' -PercentComplete ($_ * 10)
+                Start-Sleep -Milliseconds 200
+            }
+        }
+
+        while ($job.State -eq 'Running')
+        {
+            Write-xJobProgress -Job $job
+            Start-Sleep -Milliseconds 250
+        }
+        Write-xJobProgress -Job $job
+        # final call shows the last update and completes/clears the bar
+
 SEE ALSO
     Get-Help New-xProgress
     Get-Help Write-xProgress
@@ -186,4 +209,5 @@ SEE ALSO
     Get-Help Start-xProgress
     Get-Help Suspend-xProgress
     Get-Help Resume-xProgress
+    Get-Help Write-xJobProgress
     Get-Help Write-Progress

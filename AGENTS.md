@@ -29,7 +29,7 @@ The CI treats any **Error**-severity finding as a failure; warnings are logged b
 
 - Framework: **Pester v5** (`#Requires -Modules @{ModuleName='Pester'; ModuleVersion='5.0.0'}` in every test file — a floor, not an exact pin)
 - Test files: `Tests/*.Tests.ps1`, one per exported function plus 4 meta files (`Help.Tests.ps1`, `Module.Tests.ps1`, `Pester.Tests.ps1`, `ScriptAnalyzer.Tests.ps1`)
-- Tags: `Build` (the 4 meta files), `UnitTests` (everything else — this module has no background jobs/network/filesystem I/O to integration-test)
+- Tags: `Build` (the 4 meta files), `UnitTests` (everything else — this module has no network/filesystem I/O to integration-test; `Write-xJobProgress.Tests.ps1` does exercise real in-process `Start-Job` background jobs, but stays `UnitTests`-tagged since nothing leaves the local machine)
 - Run all: `Invoke-Pester -Path ./Tests -Output Detailed`
 - Run one function's tests: `Invoke-Pester -Path ./Tests/New-xProgress.Tests.ps1 -Output Detailed`
 - Each test file independently locates and imports the manifest (`Import-Module ...\xProgress.psd1 -Force`) in its own `BeforeAll`, so files can run standalone or in any order
@@ -56,6 +56,8 @@ All progress instances live in two module-scoped variables in `xProgress.psm1`:
 
 - `$script:ProgressTracker` — hashtable keyed by GUID string; each value is a `PSCustomObject` representing one progress instance.
 - `$script:WriteProgressID` — integer counter starting at 628, auto-incremented to assign unique `Write-Progress -Id` values.
+- `$script:JobProgressMap` — used only by `Write-xJobProgress`, entirely separate from `$script:ProgressTracker`. Nested hashtable keyed by `Job.InstanceId.Guid` -> `ChildJob.InstanceId.Guid` -> `ActivityId (int)` -> assigned `Write-Progress -Id` (drawn from the same `$script:WriteProgressID` counter, so job-mirrored bars can't collide with regular xProgress instance IDs).
+- `$script:JobProgressRetired` — set (hashtable of `Job.InstanceId.Guid` -> `$true`) of jobs `Write-xJobProgress` has already completed/cleaned up, so leftover `.Progress` records on a finished job are never reprocessed.
 
 ### xProgress instance object shape
 
@@ -96,6 +98,7 @@ xParentIdentity       # GUID of parent xProgress instance (if nested)
 | `Start-xProgress` | Manually starts Stopwatch |
 | `Suspend-xProgress` | Stops Stopwatch without resetting (to exclude wait time from elapsed) |
 | `Resume-xProgress` | Restarts a suspended Stopwatch |
+| `Write-xJobProgress` | Mirrors progress from a background job's `ChildJobs[*].Progress` (or the job's own `.Progress` if it has no ChildJobs) into `Write-Progress`, one bar per distinct `ActivityId`, preserving `ParentActivityId` nesting. Lightweight write-only passthrough - does not use `$script:ProgressTracker` |
 
 `Initialize-xProgress` is an alias for `New-xProgress`.
 
@@ -105,6 +108,8 @@ Parent/child `Write-Progress` nesting is supported two ways:
 
 - **Manual:** Pass `-Id` / `-ParentId` integers directly.
 - **xProgress-managed:** Pass `-xParentIdentity` (alias `xPPID`) with the parent's GUID; the module resolves the integer IDs automatically.
+
+**Fast-follow note:** `Write-xJobProgress`'s mirrored job bars are not yet nestable under a caller's own xProgress instance. A future `-xParentIdentity` parameter on `Write-xJobProgress` is planned - `$script:JobProgressMap` is already independent of `$script:ProgressTracker`, so adding it would only require resolving the parent's `Get-xProgress` `.ID` once and using it as the `ParentId` fallback for a job's top-level activities.
 
 ## CI/CD
 
@@ -118,4 +123,4 @@ Parent/child `Write-Progress` nesting is supported two ways:
 
 ## WIP
 
-`WIP/JobProgress.ps1` is a stub for a future feature: displaying progress from PowerShell background jobs. It is not exported or functional yet.
+The former `WIP/JobProgress.ps1` stub has graduated into `Write-xJobProgress` in `xProgress.psm1` and is exported. See the "Nesting" fast-follow note above for the one deliberately deferred piece (nesting job progress under a caller's own xProgress instance).

@@ -1,5 +1,7 @@
 $script:ProgressTracker = @{}
 $script:WriteProgressID = 628
+$script:JobProgressMap = @{}
+$script:JobProgressRetired = @{}
 
 
 Function New-xProgress
@@ -754,5 +756,157 @@ Function Resume-xProgress
         Start-xProgress -Identity $Identity
     }
 }
+
+Function Write-xJobProgress
+{
+    <#
+    .SYNOPSIS
+        Mirrors progress reported by a background job's ChildJobs into the caller's session using
+        Write-Progress
+    .DESCRIPTION
+        Inspects the Progress stream of every ChildJob under one or more
+        System.Management.Automation.Job objects (falling back to the job's own Progress stream
+        if it has no ChildJobs) and re-emits the latest record for each distinct ActivityId via
+        Write-Progress in the caller's session, preserving ParentActivityId nesting.
+
+        This is a lightweight, write-only passthrough: unlike New-xProgress/Write-xProgress, it
+        does not register anything in xProgress's own instance tracker and has no throttling,
+        Suspend/Resume, or timer semantics. Call it repeatedly from your own polling loop (see
+        examples); it does not block or poll on its own.
+
+        Write-Progress IDs are assigned from the same shared counter New-xProgress uses, so
+        mirrored job progress bars never collide with your own xProgress instance IDs. The
+        mapping is stable across repeated calls for the life of the job and is cleaned up (a
+        final Write-Progress -Completed plus removal from internal state) once the job's State
+        leaves Running.
+
+        Known limitation: if a job is removed or force-stopped before it leaves Running (and
+        before a final Write-xJobProgress call sees that), its internal id mapping is not
+        cleaned up and leaks for the life of the session.
+    .EXAMPLE
+        $job = Start-Job -ScriptBlock { 1..10 | ForEach-Object { Write-Progress -Activity 'Work' -PercentComplete ($_ * 10); Start-Sleep -Milliseconds 200 } }
+        while ($job.State -eq 'Running')
+        {
+            Write-xJobProgress -Job $job
+            Start-Sleep -Milliseconds 250
+        }
+        Write-xJobProgress -Job $job
+
+        Polls a single background job and mirrors its progress until it finishes. The final call
+        after the loop shows the last update and completes/clears the progress bar.
+    .EXAMPLE
+        Get-Job | Write-xJobProgress
+
+        Mirrors progress for every job currently tracked in the session, via the pipeline.
+    #>
+    [CmdletBinding()]
+    param(
+        [parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName,
+            HelpMessage = 'One or more background jobs whose progress should be mirrored')]
+        [System.Management.Automation.Job[]]$Job #One or more background jobs whose progress should be mirrored
+    )
+
+    process
+    {
+        foreach ($j in $Job)
+        {
+            $jobKey = $j.InstanceId.Guid
+
+            #a retired job is fully done - never reprocess leftover Progress records for it
+            if ($script:JobProgressRetired.ContainsKey($jobKey))
+            {
+                continue
+            }
+
+            $childJobs = if ($j.ChildJobs -and $j.ChildJobs.Count -gt 0) { $j.ChildJobs } else { , $j }
+
+            foreach ($child in $childJobs)
+            {
+                if (-not $child.Progress -or $child.Progress.Count -eq 0)
+                {
+                    continue
+                }
+
+                #collapse the child's whole progress history down to the latest record per ActivityId
+                $latestByActivity = @{}
+                foreach ($record in $child.Progress)
+                {
+                    $latestByActivity[$record.ActivityId] = $record
+                }
+
+                $childKey = $child.InstanceId.Guid
+                if (-not $script:JobProgressMap.ContainsKey($jobKey))
+                {
+                    $script:JobProgressMap[$jobKey] = @{}
+                }
+                if (-not $script:JobProgressMap[$jobKey].ContainsKey($childKey))
+                {
+                    $script:JobProgressMap[$jobKey][$childKey] = @{}
+                }
+                $activityMap = $script:JobProgressMap[$jobKey][$childKey] #ActivityId (int) -> WriteProgressId (int)
+
+                #assign stable Write-Progress ids for any ActivityId seen for the first time
+                foreach ($activityId in $latestByActivity.Keys)
+                {
+                    if (-not $activityMap.ContainsKey($activityId))
+                    {
+                        $activityMap[$activityId] = (++$script:WriteProgressID)
+                    }
+                }
+
+                foreach ($activityId in $latestByActivity.Keys)
+                {
+                    $record = $latestByActivity[$activityId]
+                    $wpParams = @{
+                        Id               = $activityMap[$activityId]
+                        ParentId         =
+                            if ($record.ParentActivityId -ge 0 -and $activityMap.ContainsKey($record.ParentActivityId))
+                            { $activityMap[$record.ParentActivityId] }
+                            else { -1 }
+                        Activity         = if ($record.Activity) { $record.Activity } else { 'Job Progress' }
+                        PercentComplete  = $record.PercentComplete
+                        SecondsRemaining = $record.SecondsRemaining
+                    }
+                    if ($record.StatusDescription)
+                    {
+                        $wpParams.Status = $record.StatusDescription
+                    }
+                    if ($record.CurrentOperation)
+                    {
+                        $wpParams.CurrentOperation = $record.CurrentOperation
+                    }
+
+                    if ($record.RecordType -eq [System.Management.Automation.ProgressRecordType]::Completed)
+                    {
+                        Write-Progress @wpParams -Completed
+                        $activityMap.Remove($activityId)
+                    }
+                    else
+                    {
+                        Write-Progress @wpParams
+                    }
+                }
+            }
+
+            #once the job has left Running/NotStarted, complete and retire any remaining mirrored bars
+            if ($j.State -notin @([System.Management.Automation.JobState]::Running, [System.Management.Automation.JobState]::NotStarted))
+            {
+                if ($script:JobProgressMap.ContainsKey($jobKey))
+                {
+                    foreach ($childMap in $script:JobProgressMap[$jobKey].Values)
+                    {
+                        foreach ($wpId in $childMap.Values)
+                        {
+                            Write-Progress -Id $wpId -Activity 'Job Progress' -Completed
+                        }
+                    }
+                    $script:JobProgressMap.Remove($jobKey)
+                }
+                $script:JobProgressRetired[$jobKey] = $true
+            }
+        }
+    }
+}
+
 
 New-Alias -Name Initialize-xProgress -Value New-xProgress
