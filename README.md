@@ -1,15 +1,24 @@
 # xProgress Powershell Module
 
-xProgress makes the complexity of using progress bars (including some of the more advanced features like time remaining) in Powershell simple while minimizing the performance impact of Write-Progress for processing of large numbers of actions when iterating through an array.
+xProgress makes the complexity of using progress bars in Powershell simple: throttled updates, accurate time-remaining, nested parent/child bars, and, uniquely, progress reported from *inside a background job* — while minimizing the performance impact of calling Write-Progress on every iteration of a large loop.
 
-Write-Progress is expensive to call on every iteration of a large loop and is complex to manage when fully using it's capabilities.
-xProgress solves these problems.
+Write-Progress is expensive to call on every iteration of a large loop, complex to manage when fully using its capabilities, and in the case of background jobs, invisible to the calling session.
 
-Performance
+xProgress solves all three problems.
+
+## Performance
+
     xProgress throttles Write-Progress calls to configurable intervals (e.g. every 1%, every 10 items) while still calculating accurate percentage complete and estimated time remaining for every item processed.
 
-Complexity
-    Managing progress bar calculations, parent/child relationships, and timer state is handled automatically by xProgress so you do not need to write custom tracking code for each scenario where progress output is needed.
+## Complexity
+
+    Managing progress bar calculations, parent/child relationships, and timer state is handled automatically by xProgress so you do not need to write custom tracking code for each scenario where progress output is desired.
+
+    A hand-rolled equivalent typically means: a counter and a modulus check to throttle calls, a stopwatch plus elapsed/remaining-time math, percent-complete capping so a rounding error never reports 101%, and — the moment a second progress bar nests under the first — a hand-maintained scheme for Id/ParentId bookkeeping. Roughly 40-80 lines of that plumbing per progress bar, copy-pasted and re-adapted at every callsite, versus one `New-xProgress` line plus a `Write-xProgress` call per iteration. It's also easy to get subtly wrong: a percent-complete that could exceed 100, a divide-by-zero on the first call, an auto-assigned Id that silently came out `$null`, an off-by-one in a batch-count message.  All bugs you no longer have to worry about.
+
+## Background Jobs
+
+    Write-Progress calls inside a `Start-Job` scriptblock only reach that job's own Progress stream — they are invisible in the calling session without tooling like xProgress. As far as we're aware, no other PowerShell module does this for you. Getting it right by hand (tracking each activity separately instead of just the last message received, preserving parent/child nesting reported inside the job, avoiding Id collisions across concurrent jobs, cleaning up once a job finishes) easily runs past 100 lines. This why most scripts and modules either skip job progress entirely or settle for a naive "show whatever came in last" readout. `Write-xJobProgress` reduces all of that to one cmdlet call in your own polling loop.
 
 ```Powershell
 New-xProgress
@@ -233,4 +242,4 @@ If the job's scriptblock reports more than one activity (including nested activi
 ## Development Plans
 
 - `Write-xJobProgress`: add an `-xParentIdentity` parameter to nest mirrored job progress bars under a caller's own xProgress instance
-- possibly incorporate some gui progress bars like this: https://key2consulting.com/powershell-how-to-display-job-progress/ or https://github.com/Tiberriver256/PoshProgressBar
+- possibly incorporate new progress bar ideas such as this: https://github.com/Tiberriver256/PoshProgressBar or https://github.com/rsalmei/alive-progress or https://github.com/tqdm/tqdm?tab=readme-ov-file
