@@ -12,7 +12,7 @@
     RootModule        = 'xProgress.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '1.0.1'
+    ModuleVersion     = '1.1.0'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -69,7 +69,7 @@
     # NestedModules = @()
 
     # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-    FunctionsToExport = 'New-xProgress', 'Write-xProgress', 'Complete-xProgress', 'Get-xProgress', 'Set-xProgress', 'Start-xProgress', 'Suspend-xProgress', 'Resume-xProgress'
+    FunctionsToExport = 'New-xProgress', 'Write-xProgress', 'Complete-xProgress', 'Get-xProgress', 'Set-xProgress', 'Start-xProgress', 'Suspend-xProgress', 'Resume-xProgress', 'Write-xJobProgress'
 
     # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
     #CmdletsToExport = '*'
@@ -107,7 +107,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = '1.0.1 - Bug fix: New-xProgress auto-assigned -Id (and any child ParentID via -xParentIdentity) could come out null/0 instead of an incrementing integer, causing Write-Progress to throw. Fixed.'
+            ReleaseNotes = '1.1.0 - Added Write-xJobProgress: mirrors progress reported by PowerShell background jobs (Write-Progress calls inside a job scriptblock) into the caller''s session via Write-Progress, preserving concurrent/nested activities.'
 
             # Prerelease string of this module
             # Prerelease = ''

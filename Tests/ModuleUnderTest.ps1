@@ -19,3 +19,27 @@ if (-not $manifest)
 $projectRoot = $manifest.DirectoryName
 $moduleName = $manifest.BaseName
 $manifestPath = $manifest.FullName
+
+# Builds a small real directory/file tree under $Root and returns the created file paths.
+# $Root must be a plain OS path (e.g. Pester's $TestDrive), not the TestDrive: PSDrive - a
+# separate Start-Job process can't resolve the caller's PSDrives.
+function New-TestFileTree
+{
+    param(
+        [Parameter(Mandatory)]
+        [string]$Root
+    )
+
+    $files = foreach ($sub in 'Alpha', 'Beta', 'Gamma')
+    {
+        $dir = Join-Path -Path $Root -ChildPath $sub
+        New-Item -Path $dir -ItemType Directory -Force | Out-Null
+        foreach ($i in 1..4)
+        {
+            $filePath = Join-Path -Path $dir -ChildPath "file$i.txt"
+            Set-Content -Path $filePath -Value "$sub-$i-$(Get-Random)"
+            $filePath
+        }
+    }
+    return $files
+}
