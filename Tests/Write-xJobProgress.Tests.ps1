@@ -192,3 +192,82 @@ Describe "$CommandName Unit Tests" -Tag 'UnitTests' {
         }
     }
 }
+
+Describe "$CommandName Integration Tests" -Tag 'IntegrationTests' {
+    # No Mock anywhere in this Describe. Two real, nested background jobs are used: an inner job
+    # does real file-system traversal and calls the real built-in Write-Progress itself (the
+    # "someone else's job I want to mirror" case Write-xJobProgress exists for); an outer job
+    # imports the module and makes real, unmocked Write-xJobProgress calls while polling the
+    # inner job. The outer job's own Progress collection captures Write-xJobProgress's real,
+    # mirrored Write-Progress output.
+    BeforeAll {
+        $script:integrationFiles = New-TestFileTree -Root $TestDrive
+    }
+
+    Context 'Mirroring a real background job''s real Write-Progress output' {
+        BeforeAll {
+            $script:outerJob = Start-Job -ScriptBlock {
+                param($ManifestPath, $Files)
+                Import-Module -Name $ManifestPath -Force
+
+                $innerJob = Start-Job -ScriptBlock {
+                    param($Files)
+                    $total = $Files.Count
+                    $count = 0
+                    foreach ($f in $Files)
+                    {
+                        $count++
+                        Get-FileHash -Path $f -Algorithm SHA1 | Out-Null
+                        Write-Progress -Activity 'Real file traversal' -PercentComplete ([math]::Round($count / $total * 100))
+                        Start-Sleep -Milliseconds 150
+                    }
+                } -ArgumentList (, $Files)
+
+                try
+                {
+                    $timeout = [System.Diagnostics.Stopwatch]::StartNew()
+                    while ($innerJob.State -eq 'Running' -and $timeout.Elapsed.TotalSeconds -lt 30)
+                    {
+                        Write-xJobProgress -Job $innerJob
+                        Start-Sleep -Milliseconds 150
+                    }
+                    Wait-Job -Job $innerJob -Timeout 30 | Out-Null
+                    Write-xJobProgress -Job $innerJob
+                }
+                finally
+                {
+                    Remove-Job -Job $innerJob -Force -ErrorAction SilentlyContinue
+                }
+            } -ArgumentList $manifestPath, (, $script:integrationFiles)
+            Wait-Job -Job $script:outerJob -Timeout 60 | Out-Null
+            $script:mirrored = $script:outerJob.ChildJobs[0].Progress
+        }
+
+        AfterAll {
+            Remove-Job -Job $script:outerJob -Force -ErrorAction SilentlyContinue
+        }
+
+        It 'Completes the outer job without error' {
+            $script:outerJob.State | Should -Be 'Completed'
+            $script:outerJob.ChildJobs[0].Error | Should -BeNullOrEmpty
+        }
+
+        It 'Mirrors at least one real, non-completed progress update' {
+            $processing = $script:mirrored | Where-Object RecordType -EQ 'Processing'
+            $processing | Should -Not -BeNullOrEmpty
+            ($processing.PercentComplete | Where-Object { $_ -gt 0 -and $_ -le 100 }) | Should -Not -BeNullOrEmpty
+        }
+
+        It 'Uses a single, stable, non-null mirrored Id throughout' {
+            $processing = $script:mirrored | Where-Object RecordType -EQ 'Processing'
+            $processing.ActivityId | Should -Not -Contain $null
+            ($processing.ActivityId | Select-Object -Unique).Count | Should -Be 1
+        }
+
+        It 'Ends with exactly one real Completed record, once the inner job finishes' {
+            $completed = $script:mirrored | Where-Object RecordType -EQ 'Completed'
+            $completed.Count | Should -Be 1
+            $script:mirrored[-1].RecordType | Should -Be 'Completed'
+        }
+    }
+}

@@ -29,11 +29,13 @@ The CI treats any **Error**-severity finding as a failure; warnings are logged b
 
 - Framework: **Pester v5** (`#Requires -Modules @{ModuleName='Pester'; ModuleVersion='5.0.0'}` in every test file — a floor, not an exact pin)
 - Test files: `Tests/*.Tests.ps1`, one per exported function plus 4 meta files (`Help.Tests.ps1`, `Module.Tests.ps1`, `Pester.Tests.ps1`, `ScriptAnalyzer.Tests.ps1`)
-- Tags: `Build` (the 4 meta files), `UnitTests` (everything else — this module has no network/filesystem I/O to integration-test; `Write-xJobProgress.Tests.ps1` does exercise real in-process `Start-Job` background jobs, but stays `UnitTests`-tagged since nothing leaves the local machine)
+- Tags: `Build` (the 4 meta files), `UnitTests` (mocked `Write-Progress`, precise parameter-shape assertions), `IntegrationTests` (real `Write-Progress`, no mocking at all)
+- `IntegrationTests` (in `Write-xProgress.Tests.ps1` and `Write-xJobProgress.Tests.ps1`) run the module's real functions inside real `Start-Job` background jobs over a real temp file-tree fixture (`New-TestFileTree` in `ModuleUnderTest.ps1`, built under Pester's `$TestDrive`), then assert on the job's own real, unmocked `.Progress` collection of `ProgressRecord` objects. `Write-xJobProgress`'s integration test nests two real jobs (an inner one doing the real traversal, an outer one making the real, unmocked `Write-xJobProgress` calls) to capture its real mirrored output.
 - Run all: `Invoke-Pester -Path ./Tests -Output Detailed`
 - Run one function's tests: `Invoke-Pester -Path ./Tests/New-xProgress.Tests.ps1 -Output Detailed`
+- Run just the fast suite: `Invoke-Pester -Path ./Tests -ExcludeTag IntegrationTests -Output Detailed`
 - Each test file independently locates and imports the manifest (`Import-Module ...\xProgress.psd1 -Force`) in its own `BeforeAll`, so files can run standalone or in any order
-- `Write-Progress`/`Write-Information` are mocked (`Mock -ModuleName xProgress Write-Progress { }`) where the test needs to assert *what* was passed to them (e.g. a non-null `-Id`); everywhere else tests assert on real return values/state
+- `Write-Progress`/`Write-Information` are mocked (`Mock -ModuleName xProgress Write-Progress { }`) in `UnitTests` blocks where the test needs to assert *what* was passed to them (e.g. a non-null `-Id`); `IntegrationTests` blocks never mock `Write-Progress` — everywhere else tests assert on real return values/state
 - Module-private/script-scoped state (`$script:ProgressTracker`, `$script:WriteProgressID`) can be inspected directly via `& (Get-Module xProgress) { $script:ProgressTracker }` if a future private helper needs it — not currently used since all functions are public and `Get-xProgress` already exposes instance state
 - CI runs the suite on every push via the `test-with-pester` job in `.github/workflows/main.yml`
 

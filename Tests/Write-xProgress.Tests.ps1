@@ -120,3 +120,65 @@ Describe "$CommandName Unit Tests" -Tag 'UnitTests' {
         }
     }
 }
+
+Describe "$CommandName Integration Tests" -Tag 'IntegrationTests' {
+    # No Mock anywhere in this Describe - Write-Progress runs for real, inside a background job,
+    # and its real ProgressRecord output is inspected via the job's own Progress collection.
+    BeforeAll {
+        $script:integrationFiles = New-TestFileTree -Root $TestDrive
+    }
+
+    Context 'Real New-xProgress -> Write-xProgress -> Complete-xProgress lifecycle over real files' {
+        BeforeAll {
+            $script:job = Start-Job -ScriptBlock {
+                param($ManifestPath, $Files)
+                Import-Module -Name $ManifestPath -Force
+                $id = New-xProgress -ArrayToProcess $Files -ExplicitProgressInterval 1 -Activity 'Hashing files'
+                foreach ($f in $Files)
+                {
+                    Get-FileHash -Path $f -Algorithm SHA1 | Out-Null
+                    Write-xProgress -Identity $id
+                }
+                Complete-xProgress -Identity $id
+            } -ArgumentList $manifestPath, (, $script:integrationFiles)
+            Wait-Job -Job $script:job -Timeout 30 | Out-Null
+            $script:progress = $script:job.ChildJobs[0].Progress
+        }
+
+        AfterAll {
+            Remove-Job -Job $script:job -Force -ErrorAction SilentlyContinue
+        }
+
+        It 'Completes the job without error' {
+            $script:job.State | Should -Be 'Completed'
+            $script:job.ChildJobs[0].Error | Should -BeNullOrEmpty
+        }
+
+        It 'Emits real progress records: at least one update plus the final real Completed record' {
+            # Real Write-Progress calls fired in a tight loop can be coalesced in transit from a
+            # job to the parent session (only the latest state survives between polls), so this
+            # asserts on real properties rather than an exact per-file count.
+            $script:progress.Count | Should -BeGreaterOrEqual 2
+        }
+
+        It 'Uses a single, non-null ActivityId for every record' {
+            $script:progress.ActivityId | Should -Not -Contain $null
+            ($script:progress.ActivityId | Select-Object -Unique).Count | Should -Be 1
+        }
+
+        It 'Reports PercentComplete that never decreases and reaches 100' {
+            $percents = $script:progress.PercentComplete
+            for ($i = 1; $i -lt $percents.Count; $i++)
+            {
+                $percents[$i] | Should -BeGreaterOrEqual $percents[$i - 1]
+            }
+            $percents[-1] | Should -Be 100
+        }
+
+        It 'Ends with a real Completed record from Complete-xProgress' {
+            $last = $script:progress[-1]
+            $last.RecordType | Should -Be 'Completed'
+            $last.PercentComplete | Should -Be 100
+        }
+    }
+}
