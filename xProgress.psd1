@@ -12,7 +12,7 @@
     RootModule        = 'xProgress.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '1.1.0'
+    ModuleVersion     = '1.1.1'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -30,7 +30,7 @@
     Copyright         = '2026'
 
     # Description of the functionality provided by this module
-    Description       = 'xProgress provides throttled, automatically timed progress bars for PowerShell scripts and modules. It solves two problems: performance (Write-Progress is expensive to call on every iteration) and complexity (managing calculations, parent/child relationships, and timer state). Supports calculated and explicit progress intervals, nested parent/child progress bars with automatic ID management, and full stopwatch lifecycle control including suspend and resume.'
+    Description       = "xProgress makes progress bars in PowerShell simple: throttled Write-Progress calls, accurate percent-complete and time-remaining, and nested parent/child progress bars, all handled automatically instead of hand-rolled counter/timer/Id bookkeeping in every script. It also mirrors Write-Progress calls made inside a background job's scriptblock into your own session -- including nested activities -- via Write-xJobProgress, something no other PowerShell module does. Full stopwatch lifecycle control (Start-xProgress, Suspend-xProgress, Resume-xProgress) lets you exclude wait time such as API calls or sleeps from elapsed and time-remaining calculations."
 
     # Minimum version of the PowerShell engine required by this module
     PowerShellVersion = '5.1'
@@ -95,7 +95,7 @@
         PSData = @{
 
             # Tags applied to this module. These help with module discovery in online galleries.
-            Tags = 'Progress', 'Write-Progress'
+            Tags = 'Progress', 'Write-Progress', 'ProgressBar', 'Jobs', 'BackgroundJobs', 'Stopwatch', 'Performance'
 
             # A URL to the license for this module.
             LicenseUri = 'https://github.com/themodulecollective/xProgress/blob/main/LICENSE'
@@ -107,7 +107,9 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = '1.1.0 - Added Write-xJobProgress: mirrors progress reported by PowerShell background jobs (Write-Progress calls inside a job scriptblock) into the caller''s session via Write-Progress, preserving concurrent/nested activities.'
+            ReleaseNotes = '1.1.1 - Updated module Description and Gallery Tags to reflect current functionality (background job progress mirroring, stopwatch lifecycle control). No functional code changes.
+
+1.1.0 - Added Write-xJobProgress: mirrors progress reported by PowerShell background jobs (Write-Progress calls inside a job scriptblock) into the caller''s session via Write-Progress, preserving concurrent/nested activities.'
 
             # Prerelease string of this module
             # Prerelease = ''

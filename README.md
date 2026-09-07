@@ -180,6 +180,12 @@ If the job's scriptblock reports more than one activity (including nested activi
 
 ## Releases
 
+1.1.1 Metadata update
+
+- Updated module Description and PowerShell Gallery Tags to reflect current
+  functionality (background job progress mirroring, stopwatch lifecycle
+  control). No functional code changes.
+
 1.1.0 New Functionality
 
 - `Write-xJobProgress`: mirrors `Write-Progress` calls happening inside a
